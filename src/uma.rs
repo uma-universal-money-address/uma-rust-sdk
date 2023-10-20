@@ -13,7 +13,8 @@ use crate::{
         self, LnurlComplianceResponse, LnurlpRequest, LnurlpResponse, PayReqResponse,
         PayReqResponseCompliance, PayReqResponsePaymentInfo, PayRequest, PubKeyResponse,
     },
-    public_key_cache, version::{self, is_version_supported},
+    public_key_cache,
+    version::{self, is_version_supported},
 };
 
 #[derive(Debug)]
