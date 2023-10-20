@@ -5,7 +5,7 @@ mod tests {
     use crate::uma::{
         get_lnurlp_response, get_pay_req_response, get_pay_request, get_signed_lnurlp_request_url,
         is_uma_lnurl_query, parse_lnurlp_request, parse_lnurlp_response, parse_pay_req_response,
-        parse_pay_request, verify_pay_req_signature, verify_uma_lnurl_query_signature,
+        parse_pay_request, verify_pay_req_signature, verify_uma_lnurlp_query_signature,
         verify_uma_lnurlp_response_signature, UmaInvoiceCreator,
     };
 
@@ -100,7 +100,7 @@ mod tests {
 
         let query = parse_lnurlp_request(&query_url).unwrap();
 
-        let result = verify_uma_lnurl_query_signature(query, &pk.serialize());
+        let result = verify_uma_lnurlp_query_signature(query, &pk.serialize());
         assert!(result.is_ok());
     }
 
@@ -120,7 +120,7 @@ mod tests {
         let query = parse_lnurlp_request(&query_url).unwrap();
 
         let (_, pk) = generate_keypair();
-        let result = verify_uma_lnurl_query_signature(query, &pk.serialize());
+        let result = verify_uma_lnurlp_query_signature(query, &pk.serialize());
         assert!(result.is_err());
     }
 
