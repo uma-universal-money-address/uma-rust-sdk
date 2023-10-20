@@ -13,7 +13,7 @@ use crate::{
         self, LnurlComplianceResponse, LnurlpRequest, LnurlpResponse, PayReqResponse,
         PayReqResponseCompliance, PayReqResponsePaymentInfo, PayRequest, PubKeyResponse,
     },
-    public_key_cache, version,
+    public_key_cache, version::{self, is_version_supported},
 };
 
 #[derive(Debug)]
@@ -31,6 +31,7 @@ pub enum Error {
     CreateInvoiceError(String),
     InvalidUMAAddress,
     InvalidVersion,
+    UnsupportedVersion,
 }
 
 impl fmt::Display for Error {
@@ -49,6 +50,7 @@ impl fmt::Display for Error {
             Self::CreateInvoiceError(err) => write!(f, "Create invoice error {}", err),
             Self::InvalidUMAAddress => write!(f, "Invalid UMA address"),
             Self::InvalidVersion => write!(f, "Invalid version"),
+            Self::UnsupportedVersion => write!(f, "Unsupported version"),
         }
     }
 }
@@ -227,6 +229,10 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
         return Err(Error::InvalidUrlPath);
     }
 
+    if !is_version_supported(&uma_version) {
+        return Err(Error::UnsupportedVersion);
+    }
+
     let receiver_address = format!(
         "{}@{}",
         path_parts[2],
@@ -249,7 +255,7 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
 /// # Arguments
 /// * `query` - the signed query to verify.
 /// * `other_vasp_pub_key` - the bytes of the signing public key of the VASP making this request.
-pub fn verify_uma_lnurl_query_signature(
+pub fn verify_uma_lnurlp_query_signature(
     query: LnurlpRequest,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
