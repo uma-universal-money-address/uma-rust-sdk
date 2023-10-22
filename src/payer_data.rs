@@ -127,6 +127,12 @@ pub struct CompliancePayerData {
     #[serde(rename = "encryptedTravelRuleInfo")]
     pub encrypted_travel_rule_info: Option<String>,
 
+    /// travel_rule_format is an optional standardized format of the travel rule information
+    /// (e.g. IVMS). Null indicates raw json or a custom format. This field is formatted as
+    /// <standardized format>@<version> (e.g. ivms@101.2023). Version is optional.
+    #[serde(rename = "travelRuleFormat")]
+    pub travel_rule_format: Option<String>,
+
     // signature is the hex-encoded signature of sha256(ReceiverAddress|Nonce|Timestamp).
     pub signature: String,
 

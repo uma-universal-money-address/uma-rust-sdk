@@ -362,6 +362,9 @@ pub fn get_vasp_domain_from_uma_address(uma_address: &str) -> Result<String, Err
 /// * `payer_name` - the name of the sender.
 /// * `payer_email` - the email of the sender.
 /// * `tr_info` - the travel rule information to be encrypted.
+/// * `travel_rule_format` - the format of the travel rule information (e.g. IVMS). Null indicates
+///     raw json or a custom format. This field is formatted as <standardized format>@<version>
+///     (e.g. ivms@101.2023). Version is optional.
 /// * `payer_kyc_status` - the KYC status of the sender.
 /// * `payer_uxtos` - the list of UTXOs of the sender's channels that might be used to fund the payment.
 /// * `payer_node_pubkey` - If known, the public key of the sender's node. If supported by the receiving VASP's compliance provider, this will be used to pre-screen the sender's UTXOs for compliance purposes.
@@ -376,6 +379,7 @@ pub fn get_pay_request(
     payer_name: Option<&str>,
     payer_email: Option<&str>,
     tr_info: Option<&str>,
+    travel_rule_format: Option<&str>,
     payer_kyc_status: KycStatus,
     payer_uxtos: &[String],
     payer_node_pubkey: Option<&str>,
@@ -386,6 +390,7 @@ pub fn get_pay_request(
         sending_vasp_private_key,
         payer_identifier,
         tr_info,
+        travel_rule_format,
         payer_kyc_status,
         payer_uxtos,
         payer_node_pubkey,
@@ -409,6 +414,7 @@ fn get_signed_compliance_payer_data(
     sending_vasp_private_key: &[u8],
     payer_identifier: &str,
     tr_info: Option<&str>,
+    travel_rule_format: Option<&str>,
     payer_kyc_status: KycStatus,
     payer_uxtos: &[String],
     payer_node_pubkey: Option<&str>,
@@ -429,6 +435,7 @@ fn get_signed_compliance_payer_data(
         node_pubkey: payer_node_pubkey.map(|s| s.to_string()),
         kyc_status: payer_kyc_status,
         encrypted_travel_rule_info: encrypted_tr_info,
+        travel_rule_format: travel_rule_format.map(|s| s.to_string()),
         signature,
         signature_nonce: nonce,
         signature_timestamp: timestamp,
