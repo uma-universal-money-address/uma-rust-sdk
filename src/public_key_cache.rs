@@ -1,10 +1,10 @@
 use super::protocol::PubKeyResponse;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 /// PublicKeyCache is an interface for a cache of public keys for other VASPs.
 ///
 /// Implementations of this interface should be thread-safe.
-pub trait PublicKeyCache {
+pub trait PublicKeyCache: Debug + Send + Sync {
     /// fetch_public_key_for_vasp fetches the public key entry for a VASP if in the cache, otherwise
     /// returns nil.
     fn fetch_public_key_for_vasp(&self, vasp_domain: &str) -> Option<&PubKeyResponse>;
@@ -19,6 +19,7 @@ pub trait PublicKeyCache {
     fn clear(&mut self);
 }
 
+#[derive(Debug)]
 pub struct InMemoryPublicKeyCache {
     cache: HashMap<String, PubKeyResponse>,
 }
