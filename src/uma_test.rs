@@ -171,7 +171,7 @@ mod tests {
         let response_json = serde_json::to_vec(&response).unwrap();
         let response = parse_lnurlp_response(&response_json).unwrap();
 
-        let result = verify_uma_lnurlp_response_signature(response, &pk2.serialize());
+        let result = verify_uma_lnurlp_response_signature(&response, &pk2.serialize());
         assert!(result.is_ok());
     }
 
