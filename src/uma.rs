@@ -67,7 +67,7 @@ impl fmt::Display for Error {
 /// * `cache` - the PublicKeyCache cache to use. You can use the InMemoryPublicKeyCache struct, or implement your own persistent cache with any storage type.
 pub fn fetch_public_key_for_vasp<T>(
     vasp_domain: &str,
-    mut public_key_cache: T,
+    public_key_cache: &mut T,
 ) -> Result<PubKeyResponse, Error>
 where
     T: public_key_cache::PublicKeyCache,
