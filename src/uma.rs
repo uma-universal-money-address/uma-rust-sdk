@@ -330,7 +330,7 @@ fn get_signed_compliance_respionse(
 /// * `response` - the signed response to verify.
 /// * `other_vasp_pub_key` - the bytes of the signing public key of the VASP making this request.
 pub fn verify_uma_lnurlp_response_signature(
-    response: LnurlpResponse,
+    response: &LnurlpResponse,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
     let payload = response.signable_payload();
