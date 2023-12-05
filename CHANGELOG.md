@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.3.0
+- Switch `display_decimals` to `decimals` to better match a LUD-21 proposal after discussions with the author.
+
 ## v0.2.0
 - Add `display_decimals` to the `Currency` struct in the lnurlp response.
 
