@@ -148,7 +148,7 @@ mod tests {
             millisatoshi_per_unit: 34150,
             min_sendable: 1,
             max_sendable: 10000000,
-            display_decimals: Some(2),
+            decimals: Some(2),
         }];
 
         let response = get_lnurlp_response(

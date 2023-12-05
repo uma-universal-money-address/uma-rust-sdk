@@ -2,7 +2,7 @@
 name = "uma"
 description = "UMA Protocol SDK for Rust"
 authors = ["Lightspark Group, Inc. <info@lightspark.com>"]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 documentation = "https://app.lightspark.com/docs/uma-sdk"
 homepage = "https://github.com/uma-universal-money-address/uma-rust-sdk"
