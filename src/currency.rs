@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Currency {
     // The ISO 4217 (if applicable) currency code (eg. "USD"). For cryptocurrencies, this will  be a ticker
     // symbol, such as BTC for Bitcoin.

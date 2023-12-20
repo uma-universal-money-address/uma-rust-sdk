@@ -24,7 +24,7 @@ mod tests {
             uma_version: "0.2".to_string(),
         };
 
-        let url_string = format!("https://vasp2.com/.well-known/lnurlp/bob?signature=signature&nonce=12345&vaspDomain=vasp1.com&umaVersion=0.1&isSubjectToTravelRule=true&timestamp={}",&timestamp);
+        let url_string = format!("https://vasp2.com/.well-known/lnurlp/bob?signature=signature&nonce=12345&vaspDomain=vasp1.com&umaVersion=0.2&isSubjectToTravelRule=true&timestamp={}", &timestamp);
         let url = url::Url::parse(&url_string).unwrap();
 
         let query = parse_lnurlp_request(&url).unwrap();
@@ -96,7 +96,7 @@ mod tests {
             true,
             None,
         )
-        .unwrap();
+            .unwrap();
 
         let query = parse_lnurlp_request(&query_url).unwrap();
 
@@ -115,7 +115,7 @@ mod tests {
             true,
             None,
         )
-        .unwrap();
+            .unwrap();
 
         let query = parse_lnurlp_request(&query_url).unwrap();
 
@@ -136,7 +136,7 @@ mod tests {
             true,
             None,
         )
-        .unwrap();
+            .unwrap();
         let query = parse_lnurlp_request(&request).unwrap();
 
         let metadata = create_metadata_for_bob().unwrap();
@@ -167,7 +167,7 @@ mod tests {
             &currency_options,
             crate::kyc_status::KycStatus::KycStatusVerified,
         )
-        .unwrap();
+            .unwrap();
 
         let response_json = serde_json::to_vec(&response).unwrap();
         let response = parse_lnurlp_response(&response_json).unwrap();
@@ -196,7 +196,7 @@ mod tests {
             None,
             "/api/lnurl/utxocallback?txid=1234",
         )
-        .unwrap();
+            .unwrap();
 
         let payreq_json = serde_json::to_vec(&payreq).unwrap();
 
@@ -212,7 +212,7 @@ mod tests {
                 .encrypted_travel_rule_info
                 .unwrap(),
         )
-        .unwrap();
+            .unwrap();
         let plain_text = ecies::decrypt(&sk1.serialize(), &cipher_text).unwrap();
         assert_eq!(plain_text, b"some TR info for VASP2");
     }
@@ -237,7 +237,7 @@ mod tests {
             None,
             "/api/lnurl/utxocallback?txid=1234",
         )
-        .unwrap();
+            .unwrap();
 
         let client = FakeInvoiceCreator {};
 
@@ -254,7 +254,7 @@ mod tests {
             None,
             "/api/lnurl/utxocallback?txid=1234",
         )
-        .unwrap();
+            .unwrap();
 
         let response_json = serde_json::to_vec(&response).unwrap();
 
