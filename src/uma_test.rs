@@ -21,10 +21,10 @@ mod tests {
             is_subject_to_travel_rule: true,
             vasp_domain: "vasp1.com".to_string(),
             timestamp,
-            uma_version: "0.1".to_string(),
+            uma_version: "0.2".to_string(),
         };
 
-        let url_string = format!("https://vasp2.com/.well-known/lnurlp/bob?signature=signature&nonce=12345&vaspDomain=vasp1.com&umaVersion=0.1&isSubjectToTravelRule=true&timestamp={}",&timestamp);
+        let url_string = format!("https://vasp2.com/.well-known/lnurlp/bob?signature=signature&nonce=12345&vaspDomain=vasp1.com&umaVersion=0.2&isSubjectToTravelRule=true&timestamp={}", &timestamp);
         let url = url::Url::parse(&url_string).unwrap();
 
         let query = parse_lnurlp_request(&url).unwrap();
@@ -145,10 +145,10 @@ mod tests {
             code: "USD".to_string(),
             name: "US Doller".to_string(),
             symbol: "$".to_string(),
-            millisatoshi_per_unit: 34150,
+            millisatoshi_per_unit: 34150.0,
             min_sendable: 1,
             max_sendable: 10000000,
-            decimals: Some(2),
+            decimals: 2,
         }];
 
         let response = get_lnurlp_response(

@@ -98,7 +98,7 @@ impl LnurlpRequest {
 
 /// LnurlpResponse is the response to the LnurlpRequest.
 /// It is sent by the VASP that is receiving the payment to provide information to the sender about the receiver.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct LnurlpResponse {
     pub tag: String,
     pub callback: String,
