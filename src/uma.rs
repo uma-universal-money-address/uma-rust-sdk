@@ -292,8 +292,8 @@ pub fn get_lnurlp_response(
     Ok(LnurlpResponse {
         tag: "payRequest".to_string(),
         callback: callback.to_string(),
-        min_sendable: min_sendable_sats,
-        max_sendable: max_sendable_sats,
+        min_sendable: min_sendable_sats * 1000,
+        max_sendable: max_sendable_sats * 1000,
         encoded_metadata: encoded_metadata.to_string(),
         currencies: currency_options.to_vec(),
         required_payer_data: payer_data_options.clone(),
