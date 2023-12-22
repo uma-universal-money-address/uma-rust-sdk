@@ -33,5 +33,5 @@ pub struct Currency {
     // means. For example, if the currency is "BTC" and the multiplier is 1000, really we're exchanging in SATs, so
     // `decimals` would be 8.
     // For details on edge cases and examples, see https://github.com/uma-universal-money-address/protocol/blob/main/umad-04-lnurlp-response.md.
-    pub decimals: i64,
+    pub decimals: i32,
 }
