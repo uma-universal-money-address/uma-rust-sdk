@@ -477,7 +477,8 @@ pub fn get_pay_req_response<T>(
 where
     T: UmaInvoiceCreator,
 {
-    let msats_amount = (query.amount as f64 * conversion_rate).round() as i64 + receiver_fees_millisats;
+    let msats_amount =
+        (query.amount as f64 * conversion_rate).round() as i64 + receiver_fees_millisats;
     let encoded_payer_data =
         serde_json::to_string(&query.payer_data).map_err(Error::InvalidData)?;
     let encoded_invoice = invoice_creator
