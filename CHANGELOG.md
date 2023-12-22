@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+- Add the decimals field to payreq paymentinfo for convenience.
+- Make the multiplier here a float to match the Currency object in the lnurlp response.
+- Bump version to 0.3 since these are breaking changes. Protocol change: uma-universal-money-address/protocol#14
+
 ## 0.4.0
 - Make the `decimals` field on `Currency` required and change its description to include more details about its use.
 - Change the multiplier field from i64 to f64 to allow for very small unit currencies. See https://github.com/uma-universal-money-address/protocol/blob/main/umad-04-lnurlp-response.md for details on why this is needed.
