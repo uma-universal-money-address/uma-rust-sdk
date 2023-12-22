@@ -1,7 +1,7 @@
 use crate::uma;
 
 const MAJOR_VERSION: i32 = 0;
-const MINOR_VERSION: i32 = 2;
+const MINOR_VERSION: i32 = 3;
 
 pub fn uma_protocol_version() -> String {
     format!("{}.{}", MAJOR_VERSION, MINOR_VERSION)
