@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.2
+- Remove openssl usage from reqwest.
+
 ## 0.5.1
 - Remove openssl dependency.
 

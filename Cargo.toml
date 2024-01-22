@@ -2,7 +2,7 @@
 name = "uma"
 description = "UMA Protocol SDK for Rust"
 authors = ["Lightspark Group, Inc. <info@lightspark.com>"]
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 documentation = "https://app.lightspark.com/docs/uma-sdk"
 homepage = "https://github.com/uma-universal-money-address/uma-rust-sdk"
@@ -13,7 +13,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.11", features = ["blocking", "json"] }
+reqwest = { version = "0.11.23", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 futures = "0.3" 
 tokio = { version = "1.12.0", features = ["full"] } 
 base64 = "0.21.0"
