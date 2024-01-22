@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.1
+- Remove openssl dependency.
+
 ## 0.5.0
 - Add the decimals field to payreq paymentinfo for convenience.
 - Make the multiplier here a float to match the Currency object in the lnurlp response.
