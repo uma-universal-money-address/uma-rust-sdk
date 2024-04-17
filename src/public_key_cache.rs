@@ -1,4 +1,4 @@
-use super::protocol::PubKeyResponse;
+use super::protocol::pub_key_response::PubKeyResponse;
 use std::{collections::HashMap, fmt::Debug};
 
 /// PublicKeyCache is an interface for a cache of public keys for other VASPs.

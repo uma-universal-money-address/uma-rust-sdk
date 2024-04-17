@@ -9,7 +9,9 @@ mod tests {
         verify_uma_lnurlp_response_signature, UmaInvoiceCreator,
     };
 
-    use crate::{currency::Currency, payer_data::PayerDataOptions, protocol::LnurlpRequest};
+    use crate::protocol::{
+        currency::Currency, lnurl_request::LnurlpRequest, payer_data::PayerDataOptions,
+    };
 
     #[test]
     fn test_parse() {
@@ -165,7 +167,7 @@ mod tests {
                 compliance_required: true,
             },
             &currency_options,
-            crate::kyc_status::KycStatus::KycStatusVerified,
+            crate::protocol::kyc_status::KycStatus::KycStatusVerified,
         )
         .unwrap();
 
@@ -191,7 +193,7 @@ mod tests {
             None,
             Some("some TR info for VASP2"),
             None,
-            crate::kyc_status::KycStatus::KycStatusVerified,
+            crate::protocol::kyc_status::KycStatus::KycStatusVerified,
             &[],
             None,
             "/api/lnurl/utxocallback?txid=1234",
@@ -232,7 +234,7 @@ mod tests {
             None,
             Some("some TR info for VASP2"),
             None,
-            crate::kyc_status::KycStatus::KycStatusVerified,
+            crate::protocol::kyc_status::KycStatus::KycStatusVerified,
             &[],
             None,
             "/api/lnurl/utxocallback?txid=1234",

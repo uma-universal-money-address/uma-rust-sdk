@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::kyc_status::KycStatus;
+use crate::protocol::kyc_status::KycStatus;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PayerDataOptions {

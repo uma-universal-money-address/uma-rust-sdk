@@ -5,14 +5,18 @@ use bitcoin::secp256k1::{
 };
 use rand_core::{OsRng, RngCore};
 
-use crate::{
+use crate::protocol::{
     currency::Currency,
     kyc_status::KycStatus,
+    lnurl_request::LnurlpRequest,
+    lnurl_response::{LnurlComplianceResponse, LnurlpResponse},
+    pay_request::PayRequest,
     payer_data::{CompliancePayerData, PayerData, PayerDataOptions},
-    protocol::{
-        self, LnurlComplianceResponse, LnurlpRequest, LnurlpResponse, PayReqResponse,
-        PayReqResponseCompliance, PayReqResponsePaymentInfo, PayRequest, PubKeyResponse,
-    },
+    payreq_response::{PayReqResponse, PayReqResponseCompliance, PayReqResponsePaymentInfo},
+    pub_key_response::PubKeyResponse,
+};
+
+use crate::{
     public_key_cache,
     version::{self, is_version_supported},
 };
@@ -24,7 +28,7 @@ pub enum Error {
     SignatureFormatError,
     InvalidSignature,
     InvalidResponse,
-    ProtocolError(protocol::Error),
+    ProtocolError(crate::protocol::Error),
     MissingUrlParam(String),
     InvalidUrlPath,
     InvalidHost,
