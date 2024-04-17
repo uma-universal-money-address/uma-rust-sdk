@@ -1,5 +1,6 @@
 use std::fmt;
 
+pub mod counter_party_data;
 pub mod currency;
 pub mod kyc_status;
 pub mod lnurl_request;
