@@ -6,6 +6,7 @@ use bitcoin::secp256k1::{
 use rand_core::{OsRng, RngCore};
 
 use crate::protocol::{
+    self,
     currency::Currency,
     kyc_status::KycStatus,
     lnurl_request::LnurlpRequest,
@@ -166,16 +167,21 @@ pub fn get_signed_lnurlp_request_url(
     };
     let mut unsigned_request = LnurlpRequest {
         receiver_address: receiver_address.to_owned(),
-        nonce,
-        timestamp: chrono::Utc::now().timestamp(),
-        signature: "".to_owned(),
-        vasp_domain: sender_vasp_domain.to_owned(),
-        is_subject_to_travel_rule,
-        uma_version,
+        nonce: Some(nonce),
+        timestamp: Some(chrono::Utc::now().timestamp()),
+        signature: None,
+        vasp_domain: Some(sender_vasp_domain.to_owned()),
+        is_subject_to_travel_rule: Some(is_subject_to_travel_rule),
+        uma_version: Some(uma_version),
     };
 
-    let sig = sign_payload(&unsigned_request.signable_payload(), signing_private_key)?;
-    unsigned_request.signature = sig;
+    let sig = sign_payload(
+        &unsigned_request
+            .signable_payload()
+            .map_err(Error::ProtocolError)?,
+        signing_private_key,
+    )?;
+    unsigned_request.signature = Some(sig);
 
     unsigned_request
         .encode_to_url()
@@ -245,13 +251,13 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
     );
 
     Ok(LnurlpRequest {
-        vasp_domain: vasp_domain.into_owned(),
-        signature: signature.into_owned(),
         receiver_address,
-        nonce: nonce.into_owned(),
-        timestamp,
-        is_subject_to_travel_rule,
-        uma_version: uma_version.into_owned(),
+        vasp_domain: Some(vasp_domain.to_string()),
+        signature: Some(signature.to_string()),
+        nonce: Some(nonce.to_string()),
+        timestamp: Some(timestamp),
+        is_subject_to_travel_rule: Some(is_subject_to_travel_rule),
+        uma_version: Some(uma_version.to_string()),
     })
 }
 
@@ -265,8 +271,10 @@ pub fn verify_uma_lnurlp_query_signature(
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
     verify_ecdsa(
-        &query.signable_payload(),
-        &query.signature,
+        &query.signable_payload().map_err(Error::ProtocolError)?,
+        &query
+            .signature
+            .ok_or(Error::ProtocolError(protocol::Error::MissingSignature))?,
         other_vasp_pub_key,
     )
 }
@@ -290,9 +298,11 @@ pub fn get_lnurlp_response(
         requires_travel_rule_info,
         receiver_kyc_status,
     )?;
-    let uma_version =
-        version::select_lower_version(&query.uma_version, &version::uma_protocol_version())
-            .map_err(|_| Error::InvalidVersion)?;
+    let uma_version = version::select_lower_version(
+        &query.uma_version.clone().ok_or(Error::InvalidVersion)?,
+        &version::uma_protocol_version(),
+    )
+    .map_err(|_| Error::InvalidVersion)?;
     Ok(LnurlpResponse {
         tag: "payRequest".to_string(),
         callback: callback.to_string(),

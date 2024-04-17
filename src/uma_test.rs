@@ -18,12 +18,12 @@ mod tests {
         let timestamp = chrono::Utc::now().timestamp();
         let expected_query = LnurlpRequest {
             receiver_address: "bob@vasp2.com".to_string(),
-            nonce: "12345".to_string(),
-            signature: "signature".to_string(),
-            is_subject_to_travel_rule: true,
-            vasp_domain: "vasp1.com".to_string(),
-            timestamp,
-            uma_version: "0.2".to_string(),
+            nonce: Some("12345".to_string()),
+            signature: Some("signature".to_string()),
+            is_subject_to_travel_rule: Some(true),
+            vasp_domain: Some("vasp1.com".to_string()),
+            timestamp: Some(timestamp),
+            uma_version: Some("0.2".to_string()),
         };
 
         let url_string = format!("https://vasp2.com/.well-known/lnurlp/bob?signature=signature&nonce=12345&vaspDomain=vasp1.com&umaVersion=0.2&isSubjectToTravelRule=true&timestamp={}", &timestamp);

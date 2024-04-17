@@ -15,6 +15,9 @@ pub mod utxo_amount;
 pub enum Error {
     InvalidReceiverAddress,
     InvalidUrl,
+    MissingTimestamp,
+    MissingNonce,
+    MissingSignature,
 }
 
 impl fmt::Display for Error {
@@ -22,6 +25,9 @@ impl fmt::Display for Error {
         match self {
             Self::InvalidReceiverAddress => write!(f, "Invalid receiver address"),
             Self::InvalidUrl => write!(f, "Invalid URL"),
+            Self::MissingNonce => write!(f, "Missing nonce"),
+            Self::MissingTimestamp => write!(f, "Missing timestamp"),
+            Self::MissingSignature => write!(f, "Missing signature"),
         }
     }
 }
