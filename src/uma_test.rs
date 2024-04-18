@@ -100,7 +100,10 @@ mod tests {
         )
         .unwrap();
 
-        let query = parse_lnurlp_request(&query_url).unwrap();
+        let query = parse_lnurlp_request(&query_url)
+            .unwrap()
+            .as_uma_lnurlp_request()
+            .unwrap();
 
         let result = verify_uma_lnurlp_query_signature(query, &pk.serialize());
         assert!(result.is_ok());
@@ -119,7 +122,10 @@ mod tests {
         )
         .unwrap();
 
-        let query = parse_lnurlp_request(&query_url).unwrap();
+        let query = parse_lnurlp_request(&query_url)
+            .unwrap()
+            .as_uma_lnurlp_request()
+            .unwrap();
 
         let (_, pk) = generate_keypair();
         let result = verify_uma_lnurlp_query_signature(query, &pk.serialize());

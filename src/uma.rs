@@ -6,10 +6,9 @@ use bitcoin::secp256k1::{
 use rand_core::{OsRng, RngCore};
 
 use crate::protocol::{
-    self,
     currency::Currency,
     kyc_status::KycStatus,
-    lnurl_request::LnurlpRequest,
+    lnurl_request::{LnurlpRequest, UmaLnurlpRequest},
     lnurl_response::{LnurlComplianceResponse, LnurlpResponse},
     pay_request::PayRequest,
     payer_data::{CompliancePayerData, PayerData, PayerDataOptions},
@@ -267,14 +266,12 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
 /// * `query` - the signed query to verify.
 /// * `other_vasp_pub_key` - the bytes of the signing public key of the VASP making this request.
 pub fn verify_uma_lnurlp_query_signature(
-    query: LnurlpRequest,
+    query: UmaLnurlpRequest,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
     verify_ecdsa(
-        &query.signable_payload().map_err(Error::ProtocolError)?,
-        &query
-            .signature
-            .ok_or(Error::ProtocolError(protocol::Error::MissingSignature))?,
+        &query.signable_payload(),
+        &query.signature,
         other_vasp_pub_key,
     )
 }
