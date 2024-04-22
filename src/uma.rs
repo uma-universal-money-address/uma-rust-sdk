@@ -6,12 +6,13 @@ use bitcoin::secp256k1::{
 use rand_core::{OsRng, RngCore};
 
 use crate::protocol::{
+    counter_party_data::CounterPartyDataOptions,
     currency::Currency,
     kyc_status::KycStatus,
     lnurl_request::{LnurlpRequest, UmaLnurlpRequest},
     lnurl_response::{LnurlComplianceResponse, LnurlpResponse},
     pay_request::PayRequest,
-    payer_data::{CompliancePayerData, PayerData, PayerDataOptions},
+    payer_data::{CompliancePayerData, PayerData},
     payreq_response::{PayReqResponse, PayReqResponseCompliance, PayReqResponsePaymentInfo},
     pub_key_response::PubKeyResponse,
 };
@@ -285,9 +286,11 @@ pub fn get_lnurlp_response(
     encoded_metadata: &str,
     min_sendable_sats: i64,
     max_sendable_sats: i64,
-    payer_data_options: &PayerDataOptions,
+    payer_data_options: &CounterPartyDataOptions,
     currency_options: &[Currency],
     receiver_kyc_status: KycStatus,
+    comment_chars_allowed: Option<i64>,
+    nostr_pubkey: Option<String>,
 ) -> Result<LnurlpResponse, Error> {
     let compliance_response = get_signed_compliance_respionse(
         query,
@@ -300,16 +303,25 @@ pub fn get_lnurlp_response(
         &version::uma_protocol_version(),
     )
     .map_err(|_| Error::InvalidVersion)?;
+
+    let mut allows_nostr: Option<bool> = None;
+    if nostr_pubkey.is_some() {
+        allows_nostr = Some(true);
+    }
+
     Ok(LnurlpResponse {
         tag: "payRequest".to_string(),
         callback: callback.to_string(),
         min_sendable: min_sendable_sats * 1000,
         max_sendable: max_sendable_sats * 1000,
         encoded_metadata: encoded_metadata.to_string(),
-        currencies: currency_options.to_vec(),
-        required_payer_data: payer_data_options.clone(),
-        compliance: compliance_response,
-        uma_version,
+        currencies: Some(currency_options.to_vec()),
+        required_payer_data: Some(payer_data_options.clone()),
+        compliance: Some(compliance_response.clone()),
+        uma_version: Some(uma_version.clone()),
+        comment_chars_allowed,
+        nostr_pubkey,
+        allows_nostr,
     })
 }
 
@@ -344,8 +356,13 @@ pub fn verify_uma_lnurlp_response_signature(
     response: &LnurlpResponse,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
-    let payload = response.signable_payload();
-    verify_ecdsa(&payload, &response.compliance.signature, other_vasp_pub_key)
+    let uma_response = response.as_uma_response().ok_or(Error::InvalidResponse)?;
+    let payload = uma_response.signable_payload();
+    verify_ecdsa(
+        &payload,
+        &uma_response.compliance.signature,
+        other_vasp_pub_key,
+    )
 }
 
 pub fn parse_lnurlp_response(bytes: &[u8]) -> Result<LnurlpResponse, Error> {

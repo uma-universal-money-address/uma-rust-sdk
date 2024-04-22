@@ -2,6 +2,9 @@
 mod tests {
     use ecies::utils::generate_keypair;
 
+    use crate::protocol::counter_party_data::{
+        CounterPartyDataField, CounterPartyDataOption, CounterPartyDataOptions,
+    };
     use crate::uma::{
         get_lnurlp_response, get_pay_req_response, get_pay_request, get_signed_lnurlp_request_url,
         is_uma_lnurl_query, parse_lnurlp_request, parse_lnurlp_response, parse_pay_req_response,
@@ -9,9 +12,7 @@ mod tests {
         verify_uma_lnurlp_response_signature, UmaInvoiceCreator,
     };
 
-    use crate::protocol::{
-        currency::Currency, lnurl_request::LnurlpRequest, payer_data::PayerDataOptions,
-    };
+    use crate::protocol::{currency::Currency, lnurl_request::LnurlpRequest};
 
     #[test]
     fn test_parse() {
@@ -159,6 +160,21 @@ mod tests {
             decimals: 2,
         }];
 
+        let data_options = CounterPartyDataOptions::from([
+            (
+                CounterPartyDataField::CounterPartyDataFieldName,
+                CounterPartyDataOption { mandatory: false },
+            ),
+            (
+                CounterPartyDataField::CounterPartyDataFieldEmail,
+                CounterPartyDataOption { mandatory: false },
+            ),
+            (
+                CounterPartyDataField::CounterPartyDataFieldCompliance,
+                CounterPartyDataOption { mandatory: true },
+            ),
+        ]);
+
         let response = get_lnurlp_response(
             &query,
             &sk2.serialize(),
@@ -167,13 +183,11 @@ mod tests {
             metadata.as_str(),
             1,
             10_000_000,
-            &PayerDataOptions {
-                name_required: false,
-                email_required: false,
-                compliance_required: true,
-            },
+            &data_options,
             &currency_options,
             crate::protocol::kyc_status::KycStatus::KycStatusVerified,
+            None,
+            None,
         )
         .unwrap();
 
