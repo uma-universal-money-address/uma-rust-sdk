@@ -7,6 +7,7 @@ pub mod lnurl_request;
 pub mod lnurl_response;
 pub mod pay_request;
 pub mod payer_data;
+pub mod payee_data;
 pub mod payreq_response;
 pub mod pub_key_response;
 pub mod utxo_amount;
