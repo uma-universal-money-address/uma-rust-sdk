@@ -75,27 +75,19 @@ pub struct LnurlComplianceResponse {
 
 impl LnurlpResponse {
     pub fn as_uma_response(&self) -> Option<UmaLnurlpResponse> {
-        self.currencies.clone().and_then(|currenct| {
-            self.required_payer_data.clone().and_then(|payer_data| {
-                self.compliance.clone().and_then(|compliance| {
-                    self.uma_version.clone().and_then(|uma_version| {
-                        Some(UmaLnurlpResponse {
-                            tag: self.tag.clone(),
-                            callback: self.callback.clone(),
-                            min_sendable: self.min_sendable,
-                            max_sendable: self.max_sendable,
-                            encoded_metadata: self.encoded_metadata.clone(),
-                            currencies: currenct,
-                            required_payer_data: payer_data,
-                            compliance,
-                            uma_version,
-                            comment_chars_allowed: self.comment_chars_allowed,
-                            nostr_pubkey: self.nostr_pubkey.clone(),
-                            allows_nostr: self.allows_nostr,
-                        })
-                    })
-                })
-            })
+        Some(UmaLnurlpResponse {
+            tag: self.tag.clone(),
+            callback: self.callback.clone(),
+            min_sendable: self.min_sendable,
+            max_sendable: self.max_sendable,
+            encoded_metadata: self.encoded_metadata.clone(),
+            currencies: self.currencies.clone()?,
+            required_payer_data: self.required_payer_data.clone()?,
+            compliance: self.compliance.clone()?,
+            uma_version: self.uma_version.clone()?,
+            comment_chars_allowed: self.comment_chars_allowed,
+            nostr_pubkey: self.nostr_pubkey.clone(),
+            allows_nostr: self.allows_nostr,
         })
     }
 }

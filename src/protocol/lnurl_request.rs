@@ -82,28 +82,14 @@ impl LnurlpRequest {
     }
 
     pub fn as_uma_lnurlp_request(&self) -> Option<UmaLnurlpRequest> {
-        self.nonce.clone().and_then(|nonce| {
-            self.signature.clone().and_then(|signature| {
-                self.is_subject_to_travel_rule
-                    .clone()
-                    .and_then(|is_subject_to_travel_rule| {
-                        self.vasp_domain.clone().and_then(|vasp_domain| {
-                            self.timestamp.clone().and_then(|timestamp| {
-                                self.uma_version
-                                    .clone()
-                                    .map(|uma_version| UmaLnurlpRequest {
-                                        receiver_address: self.receiver_address.clone(),
-                                        nonce,
-                                        signature,
-                                        is_subject_to_travel_rule,
-                                        vasp_domain,
-                                        timestamp,
-                                        uma_version,
-                                    })
-                            })
-                        })
-                    })
-            })
+        Some(UmaLnurlpRequest {
+            receiver_address: self.receiver_address.clone(),
+            nonce: self.nonce.clone()?,
+            signature: self.signature.clone()?,
+            is_subject_to_travel_rule: self.is_subject_to_travel_rule.clone()?,
+            vasp_domain: self.vasp_domain.clone()?,
+            timestamp: self.timestamp.clone()?,
+            uma_version: self.uma_version.clone()?,
         })
     }
 
