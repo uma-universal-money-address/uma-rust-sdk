@@ -5,6 +5,7 @@ mod tests {
     use crate::protocol::counter_party_data::{
         CounterPartyDataField, CounterPartyDataOption, CounterPartyDataOptions,
     };
+    use crate::protocol::currency::ConvertibleCurrency;
     use crate::uma::{
         get_lnurlp_response, get_pay_req_response, get_pay_request, get_signed_lnurlp_request_url,
         is_uma_lnurl_query, parse_lnurlp_request, parse_lnurlp_response, parse_pay_req_response,
@@ -155,9 +156,12 @@ mod tests {
             name: "US Doller".to_string(),
             symbol: "$".to_string(),
             millisatoshi_per_unit: 34150.0,
-            min_sendable: 1,
-            max_sendable: 10000000,
+            convertible_currency: ConvertibleCurrency {
+                min_sendable: 1,
+                max_sendable: 10000000,
+            },
             decimals: 2,
+            uma_major_version: 1,
         }];
 
         let data_options = CounterPartyDataOptions::from([
