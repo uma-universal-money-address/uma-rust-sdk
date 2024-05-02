@@ -9,8 +9,8 @@ pub mod pay_request;
 pub mod payee_data;
 pub mod payer_data;
 pub mod payreq_response;
+pub mod post_transaction_callback;
 pub mod pub_key_response;
-pub mod utxo_amount;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
