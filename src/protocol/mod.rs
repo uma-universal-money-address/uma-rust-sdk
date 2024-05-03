@@ -19,6 +19,9 @@ pub enum Error {
     MissingTimestamp,
     MissingNonce,
     MissingSignature,
+    MissingPayerData,
+    MissingPayerDataIdentifier,
+    MissingPayerDataCompliance,
 }
 
 impl fmt::Display for Error {
@@ -29,6 +32,9 @@ impl fmt::Display for Error {
             Self::MissingNonce => write!(f, "Missing nonce"),
             Self::MissingTimestamp => write!(f, "Missing timestamp"),
             Self::MissingSignature => write!(f, "Missing signature"),
+            Self::MissingPayerData => write!(f, "Missing payer data"),
+            Self::MissingPayerDataIdentifier => write!(f, "Missing payer data identifier"),
+            Self::MissingPayerDataCompliance => write!(f, "Missing payer data compliance"),
         }
     }
 }

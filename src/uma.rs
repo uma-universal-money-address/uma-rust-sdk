@@ -136,10 +136,16 @@ pub fn verify_pay_req_signature(
     pay_req: &PayRequest,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
-    let payload = pay_req.signable_payload();
+    let payload = pay_req.signable_payload().map_err(Error::ProtocolError)?;
     verify_ecdsa(
         &payload,
-        &pay_req.payer_data.compliance.signature,
+        &pay_req
+            .clone()
+            .payer_data
+            .ok_or(Error::InvalidSignature)?
+            .compliance()
+            .map_err(Error::ProtocolError)?
+            .signature,
         other_vasp_pub_key,
     )
 }
@@ -399,11 +405,13 @@ pub fn get_vasp_domain_from_uma_address(uma_address: &str) -> Result<String, Err
 /// * `utxo_callback` - the URL that the receiver will use to fetch the sender's UTXOs.
 #[allow(clippy::too_many_arguments)]
 pub fn get_pay_request(
+    amount: i64,
     receiver_encryption_pub_key: &[u8],
     sending_vasp_private_key: &[u8],
-    currency_code: &str,
-    amount: i64,
+    receving_currency_code: &str,
+    is_amount_in_receving_currency_code: bool,
     payer_identifier: &str,
+    uma_major_version: i32,
     payer_name: Option<&str>,
     payer_email: Option<&str>,
     tr_info: Option<&str>,
@@ -412,6 +420,8 @@ pub fn get_pay_request(
     payer_uxtos: &[String],
     payer_node_pubkey: Option<&str>,
     utxo_callback: &str,
+    requested_payee_data: Option<CounterPartyDataOptions>,
+    comment: Option<&str>,
 ) -> Result<PayRequest, Error> {
     let compliance_data = get_signed_compliance_payer_data(
         receiver_encryption_pub_key,
@@ -424,15 +434,27 @@ pub fn get_pay_request(
         payer_node_pubkey,
         utxo_callback,
     )?;
+
+    let sending_amount_currency_code = if is_amount_in_receving_currency_code {
+        Some(receving_currency_code.to_string())
+    } else {
+        None
+    };
+
+    let payer_data = PayerData(serde_json::json!({
+        "identifier": payer_identifier,
+        "name": payer_name,
+        "email": payer_email,
+        "compliance": compliance_data,
+    }));
     Ok(PayRequest {
-        currency_code: currency_code.to_string(),
+        sending_amount_currency_code,
+        receiving_currency_code: Some(receving_currency_code.to_string()),
+        payer_data: Some(payer_data),
+        comment: comment.map(|s| s.to_string()),
+        uma_major_version,
         amount,
-        payer_data: PayerData {
-            name: payer_name.map(|s| s.to_string()),
-            email: payer_email.map(|s| s.to_string()),
-            identifier: payer_identifier.to_string(),
-            compliance: compliance_data,
-        },
+        requested_payee_data,
     })
 }
 

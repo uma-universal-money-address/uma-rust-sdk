@@ -3,7 +3,8 @@ use serde_json::Value;
 
 use super::Error;
 
-pub type PayeeData = Value;
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PayeeData(pub Value);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CompliancePayeeData {

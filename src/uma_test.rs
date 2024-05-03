@@ -208,11 +208,13 @@ mod tests {
         let (sk2, pk2) = generate_keypair();
 
         let payreq = get_pay_request(
+            1000,
             &pk1.serialize(),
             &sk2.serialize(),
             "USD",
-            1000,
+            true,
             "$alice@vasp1.com",
+            1,
             None,
             None,
             Some("some TR info for VASP2"),
@@ -221,6 +223,8 @@ mod tests {
             &[],
             None,
             "/api/lnurl/utxocallback?txid=1234",
+            None,
+            None,
         )
         .unwrap();
 
@@ -234,7 +238,9 @@ mod tests {
         let cipher_text = hex::decode(
             payreq
                 .payer_data
-                .compliance
+                .unwrap()
+                .compliance()
+                .unwrap()
                 .encrypted_travel_rule_info
                 .unwrap(),
         )
@@ -249,11 +255,13 @@ mod tests {
         let (sk2, _) = generate_keypair();
 
         let payreq = get_pay_request(
+            1000,
             &pk1.serialize(),
             &sk2.serialize(),
             "USD",
-            1000,
+            true,
             "$alice@vasp1.com",
+            1,
             None,
             None,
             Some("some TR info for VASP2"),
@@ -262,6 +270,8 @@ mod tests {
             &[],
             None,
             "/api/lnurl/utxocallback?txid=1234",
+            None,
+            None,
         )
         .unwrap();
 

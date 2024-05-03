@@ -1,6 +1,9 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 
 use crate::protocol::kyc_status::KycStatus;
+
+use super::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PayerDataOptions {
@@ -101,12 +104,31 @@ impl<'de> Deserialize<'de> for PayerDataOptions {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct PayerData {
-    pub name: Option<String>,
-    pub email: Option<String>,
-    pub identifier: String,
-    pub compliance: CompliancePayerData,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PayerData(pub Value);
+
+impl PayerData {
+    pub fn identifier(&self) -> Option<&str> {
+        self.0.get("identifier").and_then(|v| v.as_str())
+    }
+
+    pub fn name(&self) -> Option<&str> {
+        self.0.get("name").and_then(|v| v.as_str())
+    }
+
+    pub fn email(&self) -> Option<&str> {
+        self.0.get("email").and_then(|v| v.as_str())
+    }
+
+    pub fn compliance(&self) -> Result<CompliancePayerData, Error> {
+        let compliance = self
+            .0
+            .get("compliance")
+            .ok_or(Error::MissingPayerDataCompliance)?;
+        let result: CompliancePayerData = serde_json::from_value(compliance.clone())
+            .map_err(|_| Error::MissingPayerDataCompliance)?;
+        Ok(result)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
