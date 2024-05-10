@@ -1,108 +1,9 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::protocol::kyc_status::KycStatus;
 
 use super::Error;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PayerDataOptions {
-    pub name_required: bool,
-    pub email_required: bool,
-    pub compliance_required: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct PayerDataOption {
-    mandatory: bool,
-}
-
-impl Serialize for PayerDataOptions {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        use serde::ser::SerializeStruct;
-
-        let mut state = serializer.serialize_struct("PayerDataOptions", 4)?;
-        state.serialize_field("identifier", &PayerDataOption { mandatory: true })?;
-        state.serialize_field(
-            "name",
-            &PayerDataOption {
-                mandatory: self.name_required,
-            },
-        )?;
-        state.serialize_field(
-            "email",
-            &PayerDataOption {
-                mandatory: self.email_required,
-            },
-        )?;
-        state.serialize_field(
-            "compliance",
-            &PayerDataOption {
-                mandatory: self.compliance_required,
-            },
-        )?;
-        state.end()
-    }
-}
-
-impl<'de> Deserialize<'de> for PayerDataOptions {
-    fn deserialize<D>(deserializer: D) -> Result<PayerDataOptions, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        use serde::de::{MapAccess, Visitor};
-
-        struct PayerDataOptionsVisitor;
-
-        impl<'de> Visitor<'de> for PayerDataOptionsVisitor {
-            type Value = PayerDataOptions;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("struct PayerDataOptions")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<PayerDataOptions, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let mut name_required = false;
-                let mut email_required = false;
-                let mut compliance_required = false;
-
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "name" => {
-                            let option: PayerDataOption = map.next_value()?;
-                            name_required = option.mandatory;
-                        }
-                        "email" => {
-                            let option: PayerDataOption = map.next_value()?;
-                            email_required = option.mandatory;
-                        }
-                        "compliance" => {
-                            let option: PayerDataOption = map.next_value()?;
-                            compliance_required = option.mandatory;
-                        }
-                        _ => {
-                            let _: PayerDataOption = map.next_value()?;
-                        }
-                    }
-                }
-
-                Ok(PayerDataOptions {
-                    name_required,
-                    email_required,
-                    compliance_required,
-                })
-            }
-        }
-
-        deserializer.deserialize_map(PayerDataOptionsVisitor)
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PayerData(pub Value);
@@ -120,6 +21,10 @@ impl PayerData {
         self.0.get("email").and_then(|v| v.as_str())
     }
 
+    pub fn string_field(&self, field: &str) -> Option<&str> {
+        self.0.get(field).and_then(|v| v.as_str())
+    }
+
     pub fn compliance(&self) -> Result<CompliancePayerData, Error> {
         let compliance = self
             .0
@@ -128,6 +33,43 @@ impl PayerData {
         let result: CompliancePayerData = serde_json::from_value(compliance.clone())
             .map_err(|_| Error::MissingPayerDataCompliance)?;
         Ok(result)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TravelRuleFormat {
+    pub type_field: Option<String>,
+
+    pub value: Option<String>,
+}
+
+impl Serialize for TravelRuleFormat {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match (&self.type_field, &self.value) {
+            (Some(type_field), Some(value)) => {
+                serializer.serialize_str(&format!("{}@{}", type_field, value))
+            }
+            (None, Some(value)) => serializer.serialize_str(value),
+            _ => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for TravelRuleFormat {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        let parts: Vec<&str> = s.split('@').collect();
+        match parts.len() {
+            1 => Ok(TravelRuleFormat {
+                type_field: None,
+                value: Some(parts[0].to_string()),
+            }),
+            2 => Ok(TravelRuleFormat {
+                type_field: Some(parts[0].to_string()),
+                value: Some(parts[1].to_string()),
+            }),
+            _ => Err(serde::de::Error::custom("invalid travel rule format")),
+        }
     }
 }
 
@@ -153,7 +95,7 @@ pub struct CompliancePayerData {
     /// (e.g. IVMS). Null indicates raw json or a custom format. This field is formatted as
     /// <standardized format>@<version> (e.g. ivms@101.2023). Version is optional.
     #[serde(rename = "travelRuleFormat")]
-    pub travel_rule_format: Option<String>,
+    pub travel_rule_format: Option<TravelRuleFormat>,
 
     // signature is the hex-encoded signature of sha256(ReceiverAddress|Nonce|Timestamp).
     pub signature: String,
