@@ -241,6 +241,7 @@ mod tests {
                 .unwrap()
                 .compliance()
                 .unwrap()
+                .unwrap()
                 .encrypted_travel_rule_info
                 .unwrap(),
         )

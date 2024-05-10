@@ -145,6 +145,9 @@ pub fn verify_pay_req_signature(
             .ok_or(Error::InvalidSignature)?
             .compliance()
             .map_err(Error::ProtocolError)?
+            .ok_or(Error::ProtocolError(
+                crate::protocol::Error::MissingPayerDataCompliance,
+            ))?
             .signature,
         other_vasp_pub_key,
     )

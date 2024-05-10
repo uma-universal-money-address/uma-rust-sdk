@@ -62,12 +62,23 @@ impl PayRequest {
             .identifier()
             .ok_or(Error::MissingPayerDataIdentifier)?;
 
-        let compliance_data = payer_data.compliance()?;
+        let compliance_data = payer_data
+            .compliance()?
+            .ok_or(Error::MissingPayerDataCompliance)?;
 
         let payload_string = format!(
             "{}|{}|{}",
             sender_address, compliance_data.signature_nonce, compliance_data.signature_timestamp,
         );
         Ok(payload_string.into_bytes())
+    }
+
+    pub fn is_uma_request(&self) -> bool {
+        if let Some(payer_data) = &self.payer_data {
+            if let Ok(compliance) = payer_data.compliance() {
+                return compliance.is_some() && payer_data.identifier().is_some();
+            }
+        }
+        false
     }
 }

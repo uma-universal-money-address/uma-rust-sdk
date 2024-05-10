@@ -25,14 +25,14 @@ impl PayerData {
         self.0.get(field).and_then(|v| v.as_str())
     }
 
-    pub fn compliance(&self) -> Result<CompliancePayerData, Error> {
-        let compliance = self
-            .0
-            .get("compliance")
-            .ok_or(Error::MissingPayerDataCompliance)?;
-        let result: CompliancePayerData = serde_json::from_value(compliance.clone())
-            .map_err(|_| Error::MissingPayerDataCompliance)?;
-        Ok(result)
+    pub fn compliance(&self) -> Result<Option<CompliancePayerData>, Error> {
+        if let Some(compliance) = self.0.get("compliance") {
+            let result: CompliancePayerData = serde_json::from_value(compliance.clone())
+                .map_err(|_| Error::MissingPayerDataCompliance)?;
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
     }
 }
 
