@@ -22,6 +22,7 @@ pub enum Error {
     MissingPayerData,
     MissingPayerDataIdentifier,
     MissingPayerDataCompliance,
+    AmountFormatError,
 }
 
 impl fmt::Display for Error {
@@ -35,6 +36,7 @@ impl fmt::Display for Error {
             Self::MissingPayerData => write!(f, "Missing payer data"),
             Self::MissingPayerDataIdentifier => write!(f, "Missing payer data identifier"),
             Self::MissingPayerDataCompliance => write!(f, "Missing payer data compliance"),
+            Self::AmountFormatError => write!(f, "Amount format error"),
         }
     }
 }
