@@ -82,3 +82,27 @@ impl PayRequest {
         false
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct PayRequestV0 {
+    #[serde(rename = "currency")]
+    receiving_currency_code: Option<String>,
+    amount: i64,
+    payer_data: Option<PayerData>,
+    #[serde(rename = "payeeData")]
+    requested_payee_data: Option<CounterPartyDataOptions>,
+    comment: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct PayRequestV1 {
+    #[serde(rename = "currency")]
+    receiving_currency_code: Option<String>,
+    amount: i64,
+    payer_data: Option<PayerData>,
+    #[serde(rename = "payeeData")]
+    requested_payee_data: Option<CounterPartyDataOptions>,
+    comment: Option<String>,
+}

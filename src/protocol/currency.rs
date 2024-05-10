@@ -184,15 +184,14 @@ impl ConvertibleCurrencyBuilder {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 struct CurrencyV0 {
     pub code: String,
     pub name: String,
     pub symbol: String,
     #[serde(rename = "multiplier")]
     pub millisatoshi_per_unit: f64,
-    #[serde(rename = "minSendable")]
     pub min_sendable: i64,
-    #[serde(rename = "maxSendable")]
     pub max_sendable: i64,
     pub decimals: i32,
 }
