@@ -299,6 +299,7 @@ mod tests {
         // assert!(result.is_ok());
     }
 
+    #[allow(dead_code)]
     struct FakeInvoiceCreator {}
 
     impl UmaInvoiceCreator for FakeInvoiceCreator {
