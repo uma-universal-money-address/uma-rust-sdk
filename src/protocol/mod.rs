@@ -23,6 +23,8 @@ pub enum Error {
     MissingPayerDataIdentifier,
     MissingPayerDataCompliance,
     AmountFormatError,
+    InvalidPubkey,
+    InvalidPubkeyCert,
 }
 
 impl fmt::Display for Error {
@@ -37,6 +39,8 @@ impl fmt::Display for Error {
             Self::MissingPayerDataIdentifier => write!(f, "Missing payer data identifier"),
             Self::MissingPayerDataCompliance => write!(f, "Missing payer data compliance"),
             Self::AmountFormatError => write!(f, "Amount format error"),
+            Self::InvalidPubkey => write!(f, "Invalid pubkey"),
+            Self::InvalidPubkeyCert => write!(f, "Invalid pubkey cert"),
         }
     }
 }
