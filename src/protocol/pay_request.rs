@@ -303,3 +303,96 @@ struct PayRequestV1 {
     requested_payee_data: Option<CounterPartyDataOptions>,
     comment: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::protocol::pay_request::PayRequestV0;
+
+    #[test]
+    fn test_parse_v0_pay_request() {
+        let json = r#"{"currency":"USD","amount":1000,"payerData":{"email":"email@themail.com","identifier":"$foo@bar.com","name":"Foo Bar"},"payeeData":null,"comment":"comment"}"#;
+        let pay_request: super::PayRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(pay_request.receiving_currency_code, Some("USD".to_string()));
+        assert_eq!(pay_request.amount, 1000);
+        let payer_data = pay_request.payer_data.unwrap();
+        assert_eq!(payer_data.identifier(), Some("$foo@bar.com"));
+        assert_eq!(payer_data.email(), Some("email@themail.com"));
+        assert_eq!(payer_data.name(), Some("Foo Bar"));
+        assert_eq!(pay_request.requested_payee_data, None);
+        assert_eq!(pay_request.comment, Some("comment".to_string()));
+        assert_eq!(pay_request.uma_major_version, 0);
+    }
+
+    #[test]
+    fn test_parse_v1_pay_request() {
+        let json = r#"{"convert":"USD","amount":"1000.USD","payerData":{"email":"email@themail.com","identifier":"$foo@bar.com","name":"Foo Bar"},"payeeData":null,"comment":"comment"}"#;
+        let pay_request: super::PayRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(pay_request.receiving_currency_code, Some("USD".to_string()));
+        assert_eq!(
+            pay_request.sending_amount_currency_code,
+            Some("USD".to_string())
+        );
+        assert_eq!(pay_request.amount, 1000);
+        let payer_data = pay_request.payer_data.unwrap();
+        assert_eq!(payer_data.identifier(), Some("$foo@bar.com"));
+        assert_eq!(payer_data.email(), Some("email@themail.com"));
+        assert_eq!(payer_data.name(), Some("Foo Bar"));
+        assert_eq!(pay_request.requested_payee_data, None);
+        assert_eq!(pay_request.comment, Some("comment".to_string()));
+        assert_eq!(pay_request.uma_major_version, 1);
+    }
+
+    #[test]
+    fn test_serialize_v0_pay_request() {
+        let pay_request = super::PayRequest {
+            receiving_currency_code: Some("USD".to_string()),
+            amount: 1000,
+            payer_data: Some(super::PayerData(serde_json::json!({
+                "email": "email@themail.com",
+                "identifier": "$foo@bar.com",
+                "name": "Foo Bar"
+            }))),
+            requested_payee_data: None,
+            comment: Some("comment".to_string()),
+            uma_major_version: 0,
+            sending_amount_currency_code: None,
+        };
+        let json = serde_json::to_string(&pay_request).unwrap();
+        let object: PayRequestV0 = serde_json::from_str(&json).unwrap();
+        assert_eq!(object.receiving_currency_code, Some("USD".to_string()));
+        assert_eq!(object.amount, 1000);
+        let payer_data = object.payer_data.unwrap();
+        assert_eq!(payer_data.identifier(), Some("$foo@bar.com"));
+        assert_eq!(payer_data.email(), Some("email@themail.com"));
+        assert_eq!(payer_data.name(), Some("Foo Bar"));
+        assert_eq!(object.requested_payee_data, None);
+        assert_eq!(object.comment, Some("comment".to_string()));
+    }
+
+    #[test]
+    fn test_serialize_v1_pay_request() {
+        let pay_request = super::PayRequest {
+            receiving_currency_code: Some("USD".to_string()),
+            amount: 1000,
+            payer_data: Some(super::PayerData(serde_json::json!({
+                "email": "email@themail.com",
+                "identifier": "$foo@bar.com",
+                "name": "Foo Bar"
+            }))),
+            requested_payee_data: None,
+            comment: Some("comment".to_string()),
+            uma_major_version: 1,
+            sending_amount_currency_code: None,
+        };
+        let json = serde_json::to_string(&pay_request).unwrap();
+        let object: super::PayRequestV1 = serde_json::from_str(&json).unwrap();
+        assert_eq!(object.receiving_currency_code, Some("USD".to_string()));
+        assert_eq!(object.amount, "1000");
+        let payer_data = object.payer_data.unwrap();
+        assert_eq!(payer_data.identifier(), Some("$foo@bar.com"));
+        assert_eq!(payer_data.email(), Some("email@themail.com"));
+        assert_eq!(payer_data.name(), Some("Foo Bar"));
+        assert_eq!(object.requested_payee_data, None);
+        assert_eq!(object.comment, Some("comment".to_string()));
+    }
+}
