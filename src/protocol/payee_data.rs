@@ -6,6 +6,18 @@ use super::Error;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PayeeData(pub Value);
 
+impl PayeeData {
+    pub fn compliance(&self) -> Result<Option<CompliancePayeeData>, Error> {
+        if let Some(compliance) = self.0.get("compliance") {
+            let result: CompliancePayeeData = serde_json::from_value(compliance.clone())
+                .map_err(|_| Error::MissingPayerDataCompliance)?;
+            Ok(Some(result))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CompliancePayeeData {
     /// NodePubKey is the public key of the receiver's node if known.

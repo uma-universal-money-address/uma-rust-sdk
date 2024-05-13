@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 use bitcoin::secp256k1::{
     ecdsa::Signature, hashes::sha256, Message, PublicKey, Secp256k1, SecretKey,
@@ -12,8 +12,9 @@ use crate::protocol::{
     lnurl_request::{LnurlpRequest, UmaLnurlpRequest},
     lnurl_response::{LnurlComplianceResponse, LnurlpResponse},
     pay_request::PayRequest,
+    payee_data::PayeeData,
     payer_data::{CompliancePayerData, PayerData, TravelRuleFormat},
-    payreq_response::{PayReqResponse, PayReqResponseCompliance, PayReqResponsePaymentInfo},
+    payreq_response::PayReqResponse,
     pub_key_response::PubKeyResponse,
 };
 
@@ -516,46 +517,26 @@ pub trait UmaInvoiceCreator {
 
 #[allow(clippy::too_many_arguments)]
 pub fn get_pay_req_response<T>(
-    query: &PayRequest,
-    invoice_creator: &T,
-    metadata: &str,
-    currency_code: &str,
-    currency_decimals: i32,
-    conversion_rate: f64,
-    receiver_fees_millisats: i64,
-    receiver_channel_utxos: &[String],
-    receiver_node_pub_key: Option<&str>,
-    utxo_callback: &str,
+    _request: &PayRequest,
+    _invoice_creator: &T,
+    _metadata: &str,
+    _receiving_currency_code: &str,
+    _receiving_currency_decimals: i32,
+    _conversion_rate: f64,
+    _receiver_fees_millisats: i64,
+    _receiver_channel_utxos: &[String],
+    _receiver_node_pub_key: Option<&str>,
+    _utxo_callback: &str,
+    _payee_data: Option<&PayeeData>,
+    _receiving_vasp_private_key: Option<Vec<u8>>,
+    _payee_identifier: Option<&str>,
+    _disposable: Option<bool>,
+    _success_action: Option<HashMap<String, String>>,
 ) -> Result<PayReqResponse, Error>
 where
     T: UmaInvoiceCreator,
 {
-    let msats_amount =
-        (query.amount as f64 * conversion_rate).round() as i64 + receiver_fees_millisats;
-    let encoded_payer_data =
-        serde_json::to_string(&query.payer_data).map_err(Error::InvalidData)?;
-    let encoded_invoice = invoice_creator
-        .create_uma_invoice(
-            msats_amount,
-            &format!("{}{{{}}}", metadata, encoded_payer_data),
-        )
-        .map_err(|e| Error::CreateInvoiceError(e.to_string()))?;
-
-    Ok(PayReqResponse {
-        encoded_invoice,
-        routes: [].to_vec(),
-        compliance: PayReqResponseCompliance {
-            node_pub_key: receiver_node_pub_key.map(|s| s.to_string()),
-            utxos: receiver_channel_utxos.to_vec(),
-            utxo_callback: utxo_callback.to_string(),
-        },
-        payment_info: PayReqResponsePaymentInfo {
-            currency_code: currency_code.to_string(),
-            decimals: currency_decimals,
-            multiplier: conversion_rate,
-            exchange_fees_millisatoshi: receiver_fees_millisats,
-        },
-    })
+    unimplemented!()
 }
 
 pub fn parse_pay_req_response(bytes: &[u8]) -> Result<PayReqResponse, Error> {
