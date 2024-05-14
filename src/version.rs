@@ -1,12 +1,32 @@
+use serde::{Deserialize, Serialize};
+
 use crate::uma;
 
-const MAJOR_VERSION: i32 = 0;
-const MINOR_VERSION: i32 = 3;
+const MAJOR_VERSION: i32 = 1;
+const MINOR_VERSION: i32 = 0;
+
+static BACKWARD_COMPATIBLE_VERSION: [&str; 1] = ["0.3"];
 
 pub fn uma_protocol_version() -> String {
     format!("{}.{}", MAJOR_VERSION, MINOR_VERSION)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnsupportedVersionError {
+    pub unsupported_version: String,
+    pub supported_major_versions: Vec<i32>,
+}
+
+pub fn get_supported_major_versions_from_error_response_body(
+    error_response_body: &[u8],
+) -> Result<Vec<i32>, uma::Error> {
+    let error_response: UnsupportedVersionError =
+        serde_json::from_slice(error_response_body).map_err(|_| uma::Error::InvalidResponse)?;
+    Ok(error_response.supported_major_versions)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParsedVersion {
     pub major: i32,
     pub minor: i32,
@@ -36,13 +56,26 @@ impl ParsedVersion {
 pub fn get_supported_major_version() -> Vec<i32> {
     // NOTE: In the future, we may want to support multiple major versions in the same SDK, but for
     // now, this keeps things simple.
-    vec![MAJOR_VERSION]
+    let mut result = vec![MAJOR_VERSION];
+    for version in BACKWARD_COMPATIBLE_VERSION.iter() {
+        if let Ok(parsed_version) = ParsedVersion::new(version) {
+            result.push(parsed_version.major);
+        }
+    }
+    result
 }
 
 pub fn get_highest_supported_version_for_major_version(
     major_version: &i32,
 ) -> Option<ParsedVersion> {
     if *major_version != MAJOR_VERSION {
+        for version in BACKWARD_COMPATIBLE_VERSION.iter() {
+            if let Ok(parsed_version) = ParsedVersion::new(version) {
+                if parsed_version.major == *major_version {
+                    return Some(parsed_version);
+                }
+            }
+        }
         None
     } else {
         ParsedVersion::new(&uma_protocol_version()).ok()
