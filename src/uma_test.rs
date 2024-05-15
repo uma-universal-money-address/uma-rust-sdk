@@ -2,10 +2,12 @@
 mod tests {
     use ecies::utils::generate_keypair;
 
+    use crate::nonce_cache::InMemoryNonceCache;
     use crate::protocol::counter_party_data::{
         CounterPartyDataField, CounterPartyDataOption, CounterPartyDataOptions,
     };
     use crate::protocol::currency::ConvertibleCurrency;
+    use crate::protocol::pub_key_response::PubKeyResponse;
     use crate::uma::{
         get_lnurlp_response, get_pay_req_response, get_pay_request, get_signed_lnurlp_request_url,
         is_uma_lnurl_query, parse_lnurlp_request, parse_lnurlp_response, parse_pay_req_response,
@@ -107,7 +109,17 @@ mod tests {
             .as_uma_lnurlp_request()
             .unwrap();
 
-        let result = verify_uma_lnurlp_query_signature(query, &pk.serialize());
+        let mut nonce_cache = InMemoryNonceCache::new(0);
+
+        let pk_response = PubKeyResponse {
+            signing_cert_chain: None,
+            encryption_cert_chain: None,
+            signing_pub_key: Some(hex::encode(pk.serialize())),
+            encryption_pub_key: None,
+            expiration_timestamp: None,
+        };
+
+        let result = verify_uma_lnurlp_query_signature(query, &pk_response, &mut nonce_cache);
         assert!(result.is_ok());
     }
 
@@ -130,7 +142,17 @@ mod tests {
             .unwrap();
 
         let (_, pk) = generate_keypair();
-        let result = verify_uma_lnurlp_query_signature(query, &pk.serialize());
+        let mut nonce_cache = InMemoryNonceCache::new(0);
+
+        let pk_response = PubKeyResponse {
+            signing_cert_chain: None,
+            encryption_cert_chain: None,
+            signing_pub_key: Some(hex::encode(pk.serialize())),
+            encryption_pub_key: None,
+            expiration_timestamp: None,
+        };
+
+        let result = verify_uma_lnurlp_query_signature(query, &&pk_response, &mut nonce_cache);
         assert!(result.is_err());
     }
 
@@ -198,7 +220,18 @@ mod tests {
         let response_json = serde_json::to_vec(&response).unwrap();
         let response = parse_lnurlp_response(&response_json).unwrap();
 
-        let result = verify_uma_lnurlp_response_signature(&response, &pk2.serialize());
+        let mut nonce_cache = InMemoryNonceCache::new(0);
+
+        let pk_response = PubKeyResponse {
+            signing_cert_chain: None,
+            encryption_cert_chain: None,
+            signing_pub_key: Some(hex::encode(pk2.serialize())),
+            encryption_pub_key: None,
+            expiration_timestamp: None,
+        };
+
+        let result =
+            verify_uma_lnurlp_response_signature(&response, &pk_response, &mut nonce_cache);
         assert!(result.is_ok());
     }
 
@@ -232,7 +265,17 @@ mod tests {
 
         let payreq = parse_pay_request(&payreq_json).unwrap();
 
-        let result = verify_pay_req_signature(&payreq, &pk2.serialize());
+        let mut nonce_cache = InMemoryNonceCache::new(0);
+
+        let pk_response = PubKeyResponse {
+            signing_cert_chain: None,
+            encryption_cert_chain: None,
+            signing_pub_key: Some(hex::encode(pk2.serialize())),
+            encryption_pub_key: None,
+            expiration_timestamp: None,
+        };
+
+        let result = verify_pay_req_signature(&payreq, &pk_response, &mut nonce_cache);
         assert!(result.is_ok());
 
         let cipher_text = hex::decode(

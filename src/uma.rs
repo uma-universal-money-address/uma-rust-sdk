@@ -47,6 +47,7 @@ pub enum Error {
     MissingUmaField(String),
     UnsupportedCurrency,
     InvalidPayeeData,
+    InvalidPayerData,
     NonceError,
     UnsupportedUmaVersion(i32, i32),
 }
@@ -78,6 +79,7 @@ impl fmt::Display for Error {
                 "the sdk only supports sending in either SAT or the receiving currency"
             ),
             Self::InvalidPayeeData => write!(f, "Invalid payee data"),
+            Self::InvalidPayerData => write!(f, "Invalid payer data"),
             Self::NonceError => write!(f, "Nonce error"),
             Self::UnsupportedUmaVersion(version, supported_version) => {
                 write!(
@@ -211,23 +213,29 @@ fn verify_ecdsa(payload: &[u8], signature: &str, pub_key_bytes: &[u8]) -> Result
 /// * `other_vasp_pub_key` - the bytes of the signing public key of the VASP making this request.
 pub fn verify_pay_req_signature(
     pay_req: &PayRequest,
-    other_vasp_pub_key: &[u8],
+    other_vasp_pub_key_response: &PubKeyResponse,
+    nonce_cache: &mut dyn NonceCache,
 ) -> Result<(), Error> {
-    // TODO: add nonce cache.
+    let compliance_data = pay_req
+        .payer_data
+        .clone()
+        .map(|payer_data| payer_data.compliance().ok())
+        .flatten()
+        .flatten()
+        .ok_or(Error::InvalidPayerData)?;
+    nonce_cache
+        .check_and_save_nonce(
+            &compliance_data.signature_nonce,
+            compliance_data.signature_timestamp,
+        )
+        .map_err(|_| Error::NonceError)?;
     let payload = pay_req.signable_payload().map_err(Error::ProtocolError)?;
     verify_ecdsa(
         &payload,
-        &pay_req
-            .clone()
-            .payer_data
-            .ok_or(Error::InvalidSignature)?
-            .compliance()
-            .map_err(Error::ProtocolError)?
-            .ok_or(Error::ProtocolError(
-                crate::protocol::Error::MissingPayerDataCompliance,
-            ))?
-            .signature,
-        other_vasp_pub_key,
+        &compliance_data.signature,
+        &other_vasp_pub_key_response
+            .signing_pubkey()
+            .map_err(Error::ProtocolError)?,
     )
 }
 
@@ -356,13 +364,18 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
 /// * `other_vasp_pub_key` - the bytes of the signing public key of the VASP making this request.
 pub fn verify_uma_lnurlp_query_signature(
     query: UmaLnurlpRequest,
-    other_vasp_pub_key: &[u8],
+    other_vasp_pub_key_response: &PubKeyResponse,
+    nonce_cache: &mut dyn NonceCache,
 ) -> Result<(), Error> {
-    // TODO: nonce cache
+    nonce_cache
+        .check_and_save_nonce(&query.nonce, query.timestamp)
+        .map_err(|_| Error::NonceError)?;
     verify_ecdsa(
         &query.signable_payload(),
         &query.signature,
-        other_vasp_pub_key,
+        &other_vasp_pub_key_response
+            .signing_pubkey()
+            .map_err(Error::ProtocolError)?,
     )
 }
 
@@ -444,15 +457,25 @@ fn get_signed_compliance_respionse(
 /// * `other_vasp_pub_key` - the bytes of the signing public key of the VASP making this request.
 pub fn verify_uma_lnurlp_response_signature(
     response: &LnurlpResponse,
-    other_vasp_pub_key: &[u8],
+    other_vasp_pub_key_response: &PubKeyResponse,
+    nonce_cache: &mut dyn NonceCache,
 ) -> Result<(), Error> {
-    // TODO: nonce cache
+    let compliance = response
+        .as_uma_response()
+        .ok_or(Error::InvalidResponse)?
+        .compliance;
+    nonce_cache
+        .check_and_save_nonce(&compliance.nonce, compliance.timestamp)
+        .map_err(|_| Error::NonceError)?;
+
     let uma_response = response.as_uma_response().ok_or(Error::InvalidResponse)?;
     let payload = uma_response.signable_payload();
     verify_ecdsa(
         &payload,
         &uma_response.compliance.signature,
-        other_vasp_pub_key,
+        &other_vasp_pub_key_response
+            .signing_pubkey()
+            .map_err(Error::ProtocolError)?,
     )
 }
 
