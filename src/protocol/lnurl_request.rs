@@ -86,7 +86,7 @@ impl LnurlpRequest {
             receiver_address: self.receiver_address.clone(),
             nonce: self.nonce.clone()?,
             signature: self.signature.clone()?,
-            is_subject_to_travel_rule: self.is_subject_to_travel_rule?,
+            is_subject_to_travel_rule: self.is_subject_to_travel_rule.unwrap_or(false),
             vasp_domain: self.vasp_domain.clone()?,
             timestamp: self.timestamp?,
             uma_version: self.uma_version.clone()?,

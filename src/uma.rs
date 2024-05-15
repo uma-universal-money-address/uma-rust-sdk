@@ -292,7 +292,7 @@ pub fn get_signed_lnurlp_request_url(
 
 /// Checks if the given URL is a valid UMA request.
 pub fn is_uma_lnurl_query(url: &url::Url) -> bool {
-    parse_lnurlp_request(url).is_ok()
+    parse_lnurlp_request(url).is_ok_and(|req| req.as_uma_lnurlp_request().is_some())
 }
 
 /// Parses the message into an LnurlpRequest object.
