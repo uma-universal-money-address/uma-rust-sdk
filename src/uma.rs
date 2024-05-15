@@ -147,7 +147,7 @@ pub fn get_pubkey_response(
                 .subject_public_key
                 .as_bytes()
         })
-        .map(|pubkey| hex::encode(pubkey))
+        .map(hex::encode)
         .ok_or(Error::InvalidCertificatePemFormat)?;
     let encryption_pubkey = encryption_certs
         .first()
@@ -157,7 +157,7 @@ pub fn get_pubkey_response(
                 .subject_public_key
                 .as_bytes()
         })
-        .map(|pubkey| hex::encode(pubkey))
+        .map(hex::encode)
         .ok_or(Error::InvalidCertificatePemFormat)?;
     Ok(PubKeyResponse {
         signing_cert_chain: Some(signing_certs),
@@ -617,15 +617,9 @@ where
         receiver_fees_millisats,
     )?;
 
-    let rate = match conversion_rate {
-        Some(rate) => rate,
-        None => 1.0,
-    };
+    let rate = conversion_rate.unwrap_or(1.0);
 
-    let fee = match receiver_fees_millisats {
-        Some(fee) => fee,
-        None => 0,
-    };
+    let fee = receiver_fees_millisats.unwrap_or(0);
 
     let amount = match (
         receiving_currency_code,
@@ -711,16 +705,13 @@ where
         (_, None) => Some(request.amount),
     };
 
-    let payment_info = match receiving_currency_code {
-        Some(code) => Some(PayReqResponsePaymentInfo {
-            amount: receiving_currency_amount,
-            currency_code: code.to_string(),
-            decimals: receiving_currency_decimals.expect("Validated"),
-            multiplier: conversion_rate.expect("Validated"),
-            exchange_fees_millisatoshi: receiver_fees_millisats.expect("Validated"),
-        }),
-        None => None,
-    };
+    let payment_info = receiving_currency_code.map(|code| PayReqResponsePaymentInfo {
+        amount: receiving_currency_amount,
+        currency_code: code.to_string(),
+        decimals: receiving_currency_decimals.expect("Validated"),
+        multiplier: conversion_rate.expect("Validated"),
+        exchange_fees_millisatoshi: receiver_fees_millisats.expect("Validated"),
+    });
 
     Ok(PayReqResponse {
         success_action,
@@ -728,7 +719,7 @@ where
         payment_info,
         encoded_invoice,
         routes: vec![],
-        payee_data: payee_data,
+        payee_data,
         uma_major_version: request.uma_major_version,
     })
 }
@@ -758,6 +749,7 @@ fn validate_pay_req_currency_fields(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn validate_uma_pay_req_fields(
     receiving_currency_code: Option<&str>,
     receiving_currency_decimals: Option<i32>,
@@ -812,7 +804,7 @@ fn get_signed_compliance_payee_data(
         .build()
         .signable_payload(payer_identifier, payee_identifier)
         .map_err(Error::ProtocolError)?;
-    let signature = sign_payload(&signable_payload, &receiving_vasp_private_key)?;
+    let signature = sign_payload(&signable_payload, receiving_vasp_private_key)?;
     builder = builder.signature(Some(signature));
     Ok(builder.build())
 }

@@ -40,6 +40,12 @@ pub struct PayReqResponseBuilder {
     uma_major_version: Option<i32>,
 }
 
+impl Default for PayReqResponseBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PayReqResponseBuilder {
     pub fn new() -> Self {
         Self {
@@ -213,15 +219,12 @@ struct PayReqResponseV1 {
 impl Serialize for PayReqResponse {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         if self.uma_major_version == 0 {
-            let payment_info = match &self.payment_info {
-                Some(payment_info) => Some(PayReqResponsePaymentInfoV0 {
+            let payment_info = self.payment_info.as_ref().map(|payment_info| PayReqResponsePaymentInfoV0 {
                     currency_code: payment_info.currency_code.clone(),
                     multiplier: payment_info.multiplier,
                     decimals: payment_info.decimals,
                     exchange_fees_millisatoshi: payment_info.exchange_fees_millisatoshi,
-                }),
-                None => None,
-            };
+                });
             let compliance = match &self.payee_data {
                 Some(payee_data) => match payee_data.compliance() {
                     Ok(Some(compliance)) => Some(compliance),
@@ -236,7 +239,7 @@ impl Serialize for PayReqResponse {
                 payee_data: self.payee_data.clone(),
                 disposable: self.disposable,
                 success_action: self.success_action.clone(),
-                compliance: compliance,
+                compliance,
             };
             v0.serialize(serializer)
         } else {

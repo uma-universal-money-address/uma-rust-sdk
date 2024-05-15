@@ -89,6 +89,12 @@ pub struct PayRequestBuilder {
     uma_major_version: i32,
 }
 
+impl Default for PayRequestBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PayRequestBuilder {
     pub fn new() -> Self {
         Self {

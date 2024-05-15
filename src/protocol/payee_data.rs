@@ -71,6 +71,12 @@ pub struct CompliancePayeeDataBuilder {
     signature_timestamp: Option<i64>,
 }
 
+impl Default for CompliancePayeeDataBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CompliancePayeeDataBuilder {
     pub fn new() -> Self {
         Self {
@@ -120,7 +126,7 @@ impl CompliancePayeeDataBuilder {
             utxo_callback: self.utxo_callback.clone(),
             signature: self.signature.clone(),
             signature_nonce: self.signature_nonce.clone(),
-            signature_timestamp: self.signature_timestamp.clone(),
+            signature_timestamp: self.signature_timestamp,
         }
     }
 }
