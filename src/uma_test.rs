@@ -7,11 +7,14 @@ mod tests {
         CounterPartyDataField, CounterPartyDataOption, CounterPartyDataOptions,
     };
     use crate::protocol::currency::ConvertibleCurrency;
+    use crate::protocol::post_transaction_callback::UtxoWithAmount;
     use crate::protocol::pub_key_response::PubKeyResponse;
     use crate::uma::{
-        get_lnurlp_response, get_pay_req_response, get_pay_request, get_signed_lnurlp_request_url,
-        is_uma_lnurl_query, parse_lnurlp_request, parse_lnurlp_response, parse_pay_req_response,
-        parse_pay_request, verify_pay_req_signature, verify_uma_lnurlp_query_signature,
+        get_lnurlp_response, get_pay_req_response, get_pay_request, get_post_transaction_callback,
+        get_signed_lnurlp_request_url, is_uma_lnurl_query, parse_lnurlp_request,
+        parse_lnurlp_response, parse_pay_req_response, parse_pay_request,
+        parse_post_transaction_callback, verify_pay_req_signature,
+        verify_post_transaction_callback_signature, verify_uma_lnurlp_query_signature,
         verify_uma_lnurlp_response_signature, InvoiceCreator,
     };
 
@@ -152,7 +155,7 @@ mod tests {
             expiration_timestamp: None,
         };
 
-        let result = verify_uma_lnurlp_query_signature(query, &&pk_response, &mut nonce_cache);
+        let result = verify_uma_lnurlp_query_signature(query, &pk_response, &mut nonce_cache);
         assert!(result.is_err());
     }
 
@@ -346,6 +349,39 @@ mod tests {
         let result = parse_pay_req_response(&response_json);
         println!("{:?}", result);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_sign_and_verify_post_transaction_callback() {
+        let (sk, pk) = generate_keypair();
+        let callback = get_post_transaction_callback(
+            &[UtxoWithAmount {
+                utxo: "abcdef12345".to_owned(),
+                amount: 1000,
+            }],
+            "my-vasp.com",
+            &sk.serialize(),
+        )
+        .unwrap();
+
+        let callback_json = serde_json::to_vec(&callback).unwrap();
+        let callback = parse_post_transaction_callback(&callback_json).unwrap();
+        let mut nonce_cache = InMemoryNonceCache::new(0);
+
+        let pk_response = PubKeyResponse {
+            signing_cert_chain: None,
+            encryption_cert_chain: None,
+            signing_pub_key: Some(hex::encode(pk.serialize())),
+            encryption_pub_key: None,
+            expiration_timestamp: None,
+        };
+
+        assert!(verify_post_transaction_callback_signature(
+            &callback,
+            &pk_response,
+            &mut nonce_cache
+        )
+        .is_ok());
     }
 
     struct FakeInvoiceCreator {}

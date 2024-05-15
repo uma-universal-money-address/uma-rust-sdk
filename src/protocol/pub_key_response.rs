@@ -46,7 +46,7 @@ impl PubKeyResponse {
             }
         }
         if let Some(pubkey) = pubkey {
-            return Ok(hex::decode(pubkey).map_err(|_| Error::InvalidPubkey)?);
+            return hex::decode(pubkey).map_err(|_| Error::InvalidPubkey);
         }
         Err(Error::MissingPublicKey)
     }

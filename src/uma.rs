@@ -17,6 +17,9 @@ use crate::{
         payee_data::{CompliancePayeeData, CompliancePayeeDataBuilder, PayeeData},
         payer_data::{CompliancePayerData, PayerData, TravelRuleFormat},
         payreq_response::{PayReqResponse, PayReqResponsePaymentInfo},
+        post_transaction_callback::{
+            PostTransactionCallback, PostTransactionCallbackBuilder, UtxoWithAmount,
+        },
         pub_key_response::PubKeyResponse,
     },
 };
@@ -219,8 +222,7 @@ pub fn verify_pay_req_signature(
     let compliance_data = pay_req
         .payer_data
         .clone()
-        .map(|payer_data| payer_data.compliance().ok())
-        .flatten()
+        .and_then(|payer_data| payer_data.compliance().ok())
         .flatten()
         .ok_or(Error::InvalidPayerData)?;
     nonce_cache
@@ -881,6 +883,71 @@ pub fn verify_pay_req_response_signature(
     verify_ecdsa(
         &signable_payload,
         &compliance_data.signature.expect("Required"),
+        &other_vasp_pub_key_response
+            .signing_pubkey()
+            .map_err(Error::ProtocolError)?,
+    )
+}
+
+// get_post_transaction_callback Creates a signed post transaction callback.
+//
+// Args:
+//
+//	utxos: UTXOs of the channels of the VASP initiating the callback.
+//	vasp_domain: the domain of the VASP initiating the callback.
+//	signing_private_key: the private key of the VASP initiating the callback. This will be used to sign the request.
+pub fn get_post_transaction_callback(
+    utxos: &[UtxoWithAmount],
+    vasp_domain: &str,
+    signing_private_key: &[u8],
+) -> Result<PostTransactionCallback, Error> {
+    let nonce = generate_nonce();
+    let timestamp = chrono::Utc::now().timestamp();
+    let mut builder = PostTransactionCallbackBuilder::default();
+    builder = builder
+        .utxos(utxos.to_vec())
+        .vasp_domain(vasp_domain.to_string())
+        .nonce(nonce)
+        .timestamp(timestamp);
+    let signable_payload = builder
+        .build()
+        .signable_payload()
+        .map_err(Error::ProtocolError)?;
+    let signature = sign_payload(&signable_payload, signing_private_key)?;
+    builder = builder.signature(signature);
+    Ok(builder.build())
+}
+
+pub fn parse_post_transaction_callback(bytes: &[u8]) -> Result<PostTransactionCallback, Error> {
+    serde_json::from_slice(bytes).map_err(Error::InvalidData)
+}
+
+// verify_post_transaction_callback_signature Verifies the signature on a post transaction callback based on the
+// public key of the counterparty VASP.
+//
+// Args:
+//
+//	callback: the signed callback to verify.
+//	other_vasp_pub_key_response: the PubKeyResponse of the VASP making this request.
+//	nonce_cache: the NonceCache cache to use to prevent replay attacks.
+pub fn verify_post_transaction_callback_signature(
+    callback: &PostTransactionCallback,
+    other_vasp_pub_key_response: &PubKeyResponse,
+    nonce_cache: &mut dyn NonceCache,
+) -> Result<(), Error> {
+    if callback.signature.is_none() || callback.nonce.is_none() || callback.timestamp.is_none() {
+        return Err(Error::UnsupportedUmaVersion(0, 1));
+    }
+    nonce_cache
+        .check_and_save_nonce(
+            &callback.nonce.clone().expect("Required"),
+            callback.timestamp.expect("Required"),
+        )
+        .map_err(|_| Error::NonceError)?;
+    let payload = callback.signable_payload().map_err(Error::ProtocolError)?;
+    verify_ecdsa(
+        &payload,
+        &callback.signature.clone().expect("Required"),
         &other_vasp_pub_key_response
             .signing_pubkey()
             .map_err(Error::ProtocolError)?,
