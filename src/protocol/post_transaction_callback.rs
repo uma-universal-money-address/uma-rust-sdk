@@ -54,8 +54,6 @@ pub struct PostTransactionCallbackBuilder {
     timestamp: Option<i64>,
 }
 
-
-
 impl PostTransactionCallbackBuilder {
     pub fn utxos(mut self, utxos: Vec<UtxoWithAmount>) -> Self {
         self.utxos = utxos;
