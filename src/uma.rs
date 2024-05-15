@@ -22,6 +22,7 @@ use crate::{
         },
         pub_key_response::PubKeyResponse,
     },
+    version::UnsupportedVersionError,
 };
 
 use crate::{
@@ -44,7 +45,7 @@ pub enum Error {
     CreateInvoiceError(String),
     InvalidUMAAddress,
     InvalidVersion,
-    UnsupportedVersion,
+    UnsupportedVersion(UnsupportedVersionError),
     InvalidCertificatePemFormat,
     InvalidCurrencyFields,
     MissingUmaField(String),
@@ -71,7 +72,11 @@ impl fmt::Display for Error {
             Self::CreateInvoiceError(err) => write!(f, "Create invoice error {}", err),
             Self::InvalidUMAAddress => write!(f, "Invalid UMA address"),
             Self::InvalidVersion => write!(f, "Invalid version"),
-            Self::UnsupportedVersion => write!(f, "Unsupported version"),
+            Self::UnsupportedVersion(version) => write!(
+                f,
+                "Unsupported version {:?}, supported version: {:?}",
+                version.unsupported_version, version.supported_major_versions
+            ),
             Self::InvalidCertificatePemFormat => write!(f, "Invalid certificate PEM format"),
             Self::InvalidCurrencyFields => {
                 write!(f, "Invalid currency fields, must be all nil or all non-nil")
@@ -295,36 +300,31 @@ pub fn is_uma_lnurl_query(url: &url::Url) -> bool {
 /// # Arguments
 /// * `url` - the full URL of the uma request.
 pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
-    // TODO: nil field
     let mut query = url.query_pairs();
     let signature = query
         .find(|(key, _)| key == "signature")
-        .map(|(_, value)| value)
-        .ok_or(Error::MissingUrlParam("signature".to_string()))?;
+        .map(|(_, value)| value.to_string());
 
     let mut query = url.query_pairs();
     let vasp_domain = query
         .find(|(key, _)| key == "vaspDomain")
-        .map(|(_, value)| value)
-        .ok_or(Error::MissingUrlParam("vsapDomain".to_string()))?;
+        .map(|(_, value)| value.to_string());
 
     let mut query = url.query_pairs();
     let nonce = query
         .find(|(key, _)| key == "nonce")
-        .map(|(_, value)| value)
-        .ok_or(Error::MissingUrlParam("nonce".to_string()))?;
+        .map(|(_, value)| value.to_string());
 
     let mut query = url.query_pairs();
     let is_subject_to_travel_rule = query
         .find(|(key, _)| key == "isSubjectToTravelRule")
-        .map(|(_, value)| value.to_lowercase() == "true")
-        .unwrap_or(false);
+        .map(|(_, value)| value.to_lowercase() == "true");
 
     let mut query = url.query_pairs();
     let timestamp = query
         .find(|(key, _)| key == "timestamp")
         .map(|(_, value)| value.parse::<i64>())
-        .ok_or(Error::MissingUrlParam("timestamp".to_string()))?
+        .transpose()
         .map_err(|_| Error::MissingUrlParam("timestamp".to_string()))?;
 
     let mut query = url.query_pairs();
@@ -339,7 +339,10 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
     }
 
     if !is_version_supported(&uma_version) {
-        return Err(Error::UnsupportedVersion);
+        return Err(Error::UnsupportedVersion(UnsupportedVersionError {
+            unsupported_version: uma_version.to_string(),
+            supported_major_versions: version::get_supported_major_version(),
+        }));
     }
 
     let receiver_address = format!(
@@ -350,11 +353,11 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
 
     Ok(LnurlpRequest {
         receiver_address,
-        vasp_domain: Some(vasp_domain.to_string()),
-        signature: Some(signature.to_string()),
-        nonce: Some(nonce.to_string()),
-        timestamp: Some(timestamp),
-        is_subject_to_travel_rule: Some(is_subject_to_travel_rule),
+        vasp_domain,
+        signature,
+        nonce,
+        timestamp,
+        is_subject_to_travel_rule,
         uma_version: Some(uma_version.to_string()),
     })
 }
