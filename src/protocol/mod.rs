@@ -25,6 +25,7 @@ pub enum Error {
     AmountFormatError,
     InvalidPubkey,
     InvalidPubkeyCert,
+    MissingPublicKey,
 }
 
 impl fmt::Display for Error {
@@ -41,6 +42,7 @@ impl fmt::Display for Error {
             Self::AmountFormatError => write!(f, "Amount format error"),
             Self::InvalidPubkey => write!(f, "Invalid pubkey"),
             Self::InvalidPubkeyCert => write!(f, "Invalid pubkey cert"),
+            Self::MissingPublicKey => write!(f, "Missing public key"),
         }
     }
 }

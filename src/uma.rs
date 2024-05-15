@@ -1,22 +1,24 @@
-use std::{collections::HashMap, fmt};
-
 use bitcoin::secp256k1::{
     ecdsa::Signature, hashes::sha256, Message, PublicKey, Secp256k1, SecretKey,
 };
 use rand_core::{OsRng, RngCore};
+use std::{collections::HashMap, fmt};
 use x509_cert::{der::Decode, Certificate};
 
-use crate::protocol::{
-    counter_party_data::{CounterPartyDataField, CounterPartyDataOptions},
-    currency::Currency,
-    kyc_status::KycStatus,
-    lnurl_request::{LnurlpRequest, UmaLnurlpRequest},
-    lnurl_response::{LnurlComplianceResponse, LnurlpResponse},
-    pay_request::PayRequest,
-    payee_data::{CompliancePayeeData, CompliancePayeeDataBuilder, PayeeData},
-    payer_data::{CompliancePayerData, PayerData, TravelRuleFormat},
-    payreq_response::{PayReqResponse, PayReqResponsePaymentInfo},
-    pub_key_response::PubKeyResponse,
+use crate::{
+    nonce_cache::NonceCache,
+    protocol::{
+        counter_party_data::{CounterPartyDataField, CounterPartyDataOptions},
+        currency::Currency,
+        kyc_status::KycStatus,
+        lnurl_request::{LnurlpRequest, UmaLnurlpRequest},
+        lnurl_response::{LnurlComplianceResponse, LnurlpResponse},
+        pay_request::PayRequest,
+        payee_data::{CompliancePayeeData, CompliancePayeeDataBuilder, PayeeData},
+        payer_data::{CompliancePayerData, PayerData, TravelRuleFormat},
+        payreq_response::{PayReqResponse, PayReqResponsePaymentInfo},
+        pub_key_response::PubKeyResponse,
+    },
 };
 
 use crate::{
@@ -45,6 +47,8 @@ pub enum Error {
     MissingUmaField(String),
     UnsupportedCurrency,
     InvalidPayeeData,
+    NonceError,
+    UnsupportedUmaVersion(i32, i32),
 }
 
 impl fmt::Display for Error {
@@ -74,6 +78,14 @@ impl fmt::Display for Error {
                 "the sdk only supports sending in either SAT or the receiving currency"
             ),
             Self::InvalidPayeeData => write!(f, "Invalid payee data"),
+            Self::NonceError => write!(f, "Nonce error"),
+            Self::UnsupportedUmaVersion(version, supported_version) => {
+                write!(
+                    f,
+                    "Unsupported UMA version {}, version {} is required",
+                    version, supported_version
+                )
+            }
         }
     }
 }
@@ -813,7 +825,41 @@ pub fn parse_pay_req_response(bytes: &[u8]) -> Result<PayReqResponse, Error> {
     serde_json::from_slice(bytes).map_err(Error::InvalidData)
 }
 
-// pub fn verify_pay_req_response_signature(
-//     response: &PayReqResponse,
-//     other_vasp_pub_key_response: &PubKeyResponse,
-// )
+pub fn verify_pay_req_response_signature(
+    response: &PayReqResponse,
+    other_vasp_pub_key_response: &PubKeyResponse,
+    nonce_cache: &mut dyn NonceCache,
+    payer_identifier: &str,
+    payee_identifier: &str,
+) -> Result<(), Error> {
+    let compliance_data = response
+        .payee_data
+        .clone()
+        .ok_or(Error::InvalidPayeeData)?
+        .compliance()
+        .map_err(Error::ProtocolError)?
+        .ok_or(Error::InvalidPayeeData)?;
+
+    if response.uma_major_version == 0 {
+        return Err(Error::UnsupportedUmaVersion(response.uma_major_version, 1));
+    }
+
+    nonce_cache
+        .check_and_save_nonce(
+            &compliance_data.signature_nonce.clone().expect("Rquired"),
+            compliance_data.signature_timestamp.expect("Required"),
+        )
+        .map_err(|_| Error::NonceError)?;
+
+    let signable_payload = compliance_data
+        .signable_payload(payer_identifier, payee_identifier)
+        .map_err(Error::ProtocolError)?;
+
+    verify_ecdsa(
+        &signable_payload,
+        &compliance_data.signature.expect("Required"),
+        &other_vasp_pub_key_response
+            .signing_pubkey()
+            .map_err(Error::ProtocolError)?,
+    )
+}

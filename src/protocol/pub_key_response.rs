@@ -32,7 +32,7 @@ impl PubKeyResponse {
         &self,
         certs: Option<Vec<Certificate>>,
         pubkey: Option<String>,
-    ) -> Result<Option<Vec<u8>>, Error> {
+    ) -> Result<Vec<u8>, Error> {
         if let Some(certs) = certs {
             if let Some(cert) = certs.first() {
                 if let Some(pubkey) = cert
@@ -41,24 +41,24 @@ impl PubKeyResponse {
                     .subject_public_key
                     .as_bytes()
                 {
-                    return Ok(Some(pubkey.to_vec()));
+                    return Ok(pubkey.to_vec());
                 }
             }
         }
         if let Some(pubkey) = pubkey {
-            return Ok(Some(hex::decode(pubkey).map_err(|_| Error::InvalidPubkey)?));
+            return Ok(hex::decode(pubkey).map_err(|_| Error::InvalidPubkey)?);
         }
-        Ok(None)
+        Err(Error::MissingPublicKey)
     }
 
-    pub fn signing_pubkey(&self) -> Result<Option<Vec<u8>>, Error> {
+    pub fn signing_pubkey(&self) -> Result<Vec<u8>, Error> {
         self.get_pubkey(
             self.signing_cert_chain.clone(),
             self.signing_pub_key.clone(),
         )
     }
 
-    pub fn encryption_pubkey(&self) -> Result<Option<Vec<u8>>, Error> {
+    pub fn encryption_pubkey(&self) -> Result<Vec<u8>, Error> {
         self.get_pubkey(
             self.encryption_cert_chain.clone(),
             self.encryption_pub_key.clone(),
