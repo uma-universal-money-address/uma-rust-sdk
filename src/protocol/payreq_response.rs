@@ -196,10 +196,15 @@ struct PayReqResponseV0 {
     #[serde(rename = "pr")]
     encoded_invoice: String,
     routes: Vec<Route>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     payment_info: Option<PayReqResponsePaymentInfoV0>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     payee_data: Option<PayeeData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     disposable: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     success_action: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     compliance: Option<CompliancePayeeData>,
 }
 
@@ -210,21 +215,28 @@ struct PayReqResponseV1 {
     encoded_invoice: String,
     routes: Vec<Route>,
     #[serde(rename = "converted")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     payment_info: Option<PayReqResponsePaymentInfo>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     payee_data: Option<PayeeData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     disposable: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     success_action: Option<HashMap<String, String>>,
 }
 
 impl Serialize for PayReqResponse {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         if self.uma_major_version == 0 {
-            let payment_info = self.payment_info.as_ref().map(|payment_info| PayReqResponsePaymentInfoV0 {
-                    currency_code: payment_info.currency_code.clone(),
-                    multiplier: payment_info.multiplier,
-                    decimals: payment_info.decimals,
-                    exchange_fees_millisatoshi: payment_info.exchange_fees_millisatoshi,
-                });
+            let payment_info =
+                self.payment_info
+                    .as_ref()
+                    .map(|payment_info| PayReqResponsePaymentInfoV0 {
+                        currency_code: payment_info.currency_code.clone(),
+                        multiplier: payment_info.multiplier,
+                        decimals: payment_info.decimals,
+                        exchange_fees_millisatoshi: payment_info.exchange_fees_millisatoshi,
+                    });
             let compliance = match &self.payee_data {
                 Some(payee_data) => match payee_data.compliance() {
                     Ok(Some(compliance)) => Some(compliance),

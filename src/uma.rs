@@ -671,7 +671,7 @@ where
                 payer_identifier.expect("Validated"),
                 payee_identifier.expect("Validated"),
                 &utxos,
-                receiver_node_pub_key.expect("validated"),
+                receiver_node_pub_key,
                 utxo_callback,
             )?;
 
@@ -789,14 +789,14 @@ fn get_signed_compliance_payee_data(
     payer_identifier: &str,
     payee_identifier: &str,
     receiver_channel_utxos: &[String],
-    receiver_node_pub_key: &str,
+    receiver_node_pub_key: Option<&str>,
     utxo_callback: Option<&str>,
 ) -> Result<CompliancePayeeData, Error> {
     let timestamp = chrono::Utc::now().timestamp();
     let nonce = generate_nonce();
     let mut builder = CompliancePayeeDataBuilder::new()
         .utxos(receiver_channel_utxos.to_vec())
-        .node_pubkey(Some(receiver_node_pub_key.to_string()))
+        .node_pubkey(receiver_node_pub_key.map(|s| s.to_string()))
         .utxo_callback(utxo_callback.map(|s| s.to_string()))
         .signature_nonce(Some(nonce))
         .signature_timestamp(Some(timestamp));

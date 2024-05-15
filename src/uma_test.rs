@@ -7,9 +7,10 @@ mod tests {
     };
     use crate::protocol::currency::ConvertibleCurrency;
     use crate::uma::{
-        get_lnurlp_response, get_pay_request, get_signed_lnurlp_request_url, is_uma_lnurl_query,
-        parse_lnurlp_request, parse_lnurlp_response, parse_pay_request, verify_pay_req_signature,
-        verify_uma_lnurlp_query_signature, verify_uma_lnurlp_response_signature, InvoiceCreator,
+        get_lnurlp_response, get_pay_req_response, get_pay_request, get_signed_lnurlp_request_url,
+        is_uma_lnurl_query, parse_lnurlp_request, parse_lnurlp_response, parse_pay_req_response,
+        parse_pay_request, verify_pay_req_signature, verify_uma_lnurlp_query_signature,
+        verify_uma_lnurlp_response_signature, InvoiceCreator,
     };
 
     use crate::protocol::{currency::Currency, lnurl_request::LnurlpRequest};
@@ -251,55 +252,59 @@ mod tests {
 
     #[test]
     fn test_pay_req_response_and_parsing() {
-        // let (_, pk1) = generate_keypair();
-        // let (sk2, _) = generate_keypair();
+        let (_, pk1) = generate_keypair();
+        let (sk2, _) = generate_keypair();
 
-        // let payreq = get_pay_request(
-        //     1000,
-        //     &pk1.serialize(),
-        //     &sk2.serialize(),
-        //     "USD",
-        //     true,
-        //     "$alice@vasp1.com",
-        //     1,
-        //     None,
-        //     None,
-        //     Some("some TR info for VASP2"),
-        //     None,
-        //     crate::protocol::kyc_status::KycStatus::KycStatusVerified,
-        //     &[],
-        //     None,
-        //     "/api/lnurl/utxocallback?txid=1234",
-        //     None,
-        //     None,
-        // )
-        // .unwrap();
+        let payreq = get_pay_request(
+            1000,
+            &pk1.serialize(),
+            &sk2.serialize(),
+            "USD",
+            true,
+            "$alice@vasp1.com",
+            1,
+            None,
+            None,
+            Some("some TR info for VASP2"),
+            None,
+            crate::protocol::kyc_status::KycStatus::KycStatusVerified,
+            &[],
+            None,
+            "/api/lnurl/utxocallback?txid=1234",
+            None,
+            None,
+        )
+        .unwrap();
 
-        // let client = FakeInvoiceCreator {};
+        let client = FakeInvoiceCreator {};
 
-        // let metadata = create_metadata_for_bob().unwrap();
+        let metadata = create_metadata_for_bob().unwrap();
 
-        // let response = get_pay_req_response(
-        //     &payreq,
-        //     &client,
-        //     &metadata,
-        //     "USD",
-        //     2,
-        //     23150.0,
-        //     100_000,
-        //     &["abcdef12345".to_owned()],
-        //     None,
-        //     "/api/lnurl/utxocallback?txid=1234",
-        // )
-        // .unwrap();
+        let response = get_pay_req_response(
+            &payreq,
+            &client,
+            &metadata,
+            Some("USD"),
+            Some(2),
+            Some(23150.0),
+            Some(100_000),
+            Some(&["abcdef12345".to_owned()]),
+            None,
+            Some("/api/lnurl/utxocallback?txid=1234"),
+            None,
+            Some(sk2.serialize().to_vec()),
+            Some("$bob@vasp2.com"),
+            None,
+            None,
+        )
+        .unwrap();
+        let response_json = serde_json::to_vec(&response).unwrap();
 
-        // let response_json = serde_json::to_vec(&response).unwrap();
-
-        // let result = parse_pay_req_response(&response_json);
-        // assert!(result.is_ok());
+        let result = parse_pay_req_response(&response_json);
+        println!("{:?}", result);
+        assert!(result.is_ok());
     }
 
-    #[allow(dead_code)]
     struct FakeInvoiceCreator {}
 
     impl InvoiceCreator for FakeInvoiceCreator {
