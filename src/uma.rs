@@ -812,3 +812,8 @@ fn get_signed_compliance_payee_data(
 pub fn parse_pay_req_response(bytes: &[u8]) -> Result<PayReqResponse, Error> {
     serde_json::from_slice(bytes).map_err(Error::InvalidData)
 }
+
+// pub fn verify_pay_req_response_signature(
+//     response: &PayReqResponse,
+//     other_vasp_pub_key_response: &PubKeyResponse,
+// )
