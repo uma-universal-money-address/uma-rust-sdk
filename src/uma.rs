@@ -4,6 +4,7 @@ use bitcoin::secp256k1::{
     ecdsa::Signature, hashes::sha256, Message, PublicKey, Secp256k1, SecretKey,
 };
 use rand_core::{OsRng, RngCore};
+use x509_cert::{der::Decode, Certificate};
 
 use crate::protocol::{
     counter_party_data::CounterPartyDataOptions,
@@ -39,6 +40,7 @@ pub enum Error {
     InvalidUMAAddress,
     InvalidVersion,
     UnsupportedVersion,
+    InvalidCertificatePemFormat,
 }
 
 impl fmt::Display for Error {
@@ -58,6 +60,7 @@ impl fmt::Display for Error {
             Self::InvalidUMAAddress => write!(f, "Invalid UMA address"),
             Self::InvalidVersion => write!(f, "Invalid version"),
             Self::UnsupportedVersion => write!(f, "Unsupported version"),
+            Self::InvalidCertificatePemFormat => write!(f, "Invalid certificate PEM format"),
         }
     }
 }
@@ -102,6 +105,54 @@ where
 
     public_key_cache.add_public_key_for_vasp(vasp_domain, &pubkey_response);
     Ok(pubkey_response)
+}
+
+pub fn get_pubkey_response(
+    signing_cert_chain_pem: &str,
+    encryption_cert_chain_pem: &str,
+    expiration_timestamp: Option<i64>,
+) -> Result<PubKeyResponse, Error> {
+    let signing_certs = pem::parse_many(signing_cert_chain_pem)
+        .map_err(|_| Error::InvalidCertificatePemFormat)?
+        .iter()
+        .map(|pem| {
+            Certificate::from_der(pem.contents()).map_err(|_| Error::InvalidCertificatePemFormat)
+        })
+        .collect::<Result<Vec<Certificate>, Error>>()?;
+    let encryption_certs = pem::parse_many(encryption_cert_chain_pem)
+        .map_err(|_| Error::InvalidCertificatePemFormat)?
+        .iter()
+        .map(|pem| {
+            Certificate::from_der(pem.contents()).map_err(|_| Error::InvalidCertificatePemFormat)
+        })
+        .collect::<Result<Vec<Certificate>, Error>>()?;
+    let signing_pubkey = signing_certs
+        .first()
+        .and_then(|cert| {
+            cert.tbs_certificate
+                .subject_public_key_info
+                .subject_public_key
+                .as_bytes()
+        })
+        .map(|pubkey| hex::encode(pubkey))
+        .ok_or(Error::InvalidCertificatePemFormat)?;
+    let encryption_pubkey = encryption_certs
+        .first()
+        .and_then(|cert| {
+            cert.tbs_certificate
+                .subject_public_key_info
+                .subject_public_key
+                .as_bytes()
+        })
+        .map(|pubkey| hex::encode(pubkey))
+        .ok_or(Error::InvalidCertificatePemFormat)?;
+    Ok(PubKeyResponse {
+        signing_cert_chain: Some(signing_certs),
+        encryption_cert_chain: Some(encryption_certs),
+        signing_pub_key: Some(signing_pubkey),
+        encryption_pub_key: Some(encryption_pubkey),
+        expiration_timestamp,
+    })
 }
 
 pub fn generate_nonce() -> String {
