@@ -7,15 +7,15 @@ use rand_core::{OsRng, RngCore};
 use x509_cert::{der::Decode, Certificate};
 
 use crate::protocol::{
-    counter_party_data::CounterPartyDataOptions,
+    counter_party_data::{CounterPartyDataField, CounterPartyDataOptions},
     currency::Currency,
     kyc_status::KycStatus,
     lnurl_request::{LnurlpRequest, UmaLnurlpRequest},
     lnurl_response::{LnurlComplianceResponse, LnurlpResponse},
     pay_request::PayRequest,
-    payee_data::PayeeData,
+    payee_data::{CompliancePayeeData, CompliancePayeeDataBuilder, PayeeData},
     payer_data::{CompliancePayerData, PayerData, TravelRuleFormat},
-    payreq_response::PayReqResponse,
+    payreq_response::{PayReqResponse, PayReqResponsePaymentInfo},
     pub_key_response::PubKeyResponse,
 };
 
@@ -41,6 +41,10 @@ pub enum Error {
     InvalidVersion,
     UnsupportedVersion,
     InvalidCertificatePemFormat,
+    InvalidCurrencyFields,
+    MissingUmaField(String),
+    UnsupportedCurrency,
+    InvalidPayeeData,
 }
 
 impl fmt::Display for Error {
@@ -61,6 +65,15 @@ impl fmt::Display for Error {
             Self::InvalidVersion => write!(f, "Invalid version"),
             Self::UnsupportedVersion => write!(f, "Unsupported version"),
             Self::InvalidCertificatePemFormat => write!(f, "Invalid certificate PEM format"),
+            Self::InvalidCurrencyFields => {
+                write!(f, "Invalid currency fields, must be all nil or all non-nil")
+            }
+            Self::MissingUmaField(field) => write!(f, "Missing UMA field {}", field),
+            Self::UnsupportedCurrency => write!(
+                f,
+                "the sdk only supports sending in either SAT or the receiving currency"
+            ),
+            Self::InvalidPayeeData => write!(f, "Invalid payee data"),
         }
     }
 }
@@ -188,6 +201,7 @@ pub fn verify_pay_req_signature(
     pay_req: &PayRequest,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
+    // TODO: add nonce cache.
     let payload = pay_req.signable_payload().map_err(Error::ProtocolError)?;
     verify_ecdsa(
         &payload,
@@ -259,6 +273,7 @@ pub fn is_uma_lnurl_query(url: &url::Url) -> bool {
 /// # Arguments
 /// * `url` - the full URL of the uma request.
 pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
+    // TODO: nil field
     let mut query = url.query_pairs();
     let signature = query
         .find(|(key, _)| key == "signature")
@@ -331,6 +346,7 @@ pub fn verify_uma_lnurlp_query_signature(
     query: UmaLnurlpRequest,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
+    // TODO: nonce cache
     verify_ecdsa(
         &query.signable_payload(),
         &query.signature,
@@ -353,6 +369,7 @@ pub fn get_lnurlp_response(
     comment_chars_allowed: Option<i64>,
     nostr_pubkey: Option<String>,
 ) -> Result<LnurlpResponse, Error> {
+    // TODO: nil fields
     let compliance_response = get_signed_compliance_respionse(
         query,
         private_key_bytes,
@@ -417,6 +434,7 @@ pub fn verify_uma_lnurlp_response_signature(
     response: &LnurlpResponse,
     other_vasp_pub_key: &[u8],
 ) -> Result<(), Error> {
+    // TODO: nonce cache
     let uma_response = response.as_uma_response().ok_or(Error::InvalidResponse)?;
     let payload = uma_response.signable_payload();
     verify_ecdsa(
@@ -558,8 +576,8 @@ pub fn parse_pay_request(bytes: &[u8]) -> Result<PayRequest, Error> {
     serde_json::from_slice(bytes).map_err(Error::InvalidData)
 }
 
-pub trait UmaInvoiceCreator {
-    fn create_uma_invoice(
+pub trait InvoiceCreator {
+    fn create_invoice(
         &self,
         amount_msat: i64,
         metadata: &str,
@@ -568,26 +586,235 @@ pub trait UmaInvoiceCreator {
 
 #[allow(clippy::too_many_arguments)]
 pub fn get_pay_req_response<T>(
-    _request: &PayRequest,
-    _invoice_creator: &T,
-    _metadata: &str,
-    _receiving_currency_code: &str,
-    _receiving_currency_decimals: i32,
-    _conversion_rate: f64,
-    _receiver_fees_millisats: i64,
-    _receiver_channel_utxos: &[String],
-    _receiver_node_pub_key: Option<&str>,
-    _utxo_callback: &str,
-    _payee_data: Option<&PayeeData>,
-    _receiving_vasp_private_key: Option<Vec<u8>>,
-    _payee_identifier: Option<&str>,
-    _disposable: Option<bool>,
-    _success_action: Option<HashMap<String, String>>,
+    request: &PayRequest,
+    invoice_creator: &T,
+    metadata: &str,
+    receiving_currency_code: Option<&str>,
+    receiving_currency_decimals: Option<i32>,
+    conversion_rate: Option<f64>,
+    receiver_fees_millisats: Option<i64>,
+    receiver_channel_utxos: Option<&[String]>,
+    receiver_node_pub_key: Option<&str>,
+    utxo_callback: Option<&str>,
+    payee_data: Option<&PayeeData>,
+    receiving_vasp_private_key: Option<Vec<u8>>,
+    payee_identifier: Option<&str>,
+    disposable: Option<bool>,
+    success_action: Option<HashMap<String, String>>,
 ) -> Result<PayReqResponse, Error>
 where
-    T: UmaInvoiceCreator,
+    T: InvoiceCreator,
 {
-    unimplemented!()
+    if request.sending_amount_currency_code.is_some()
+        && request.sending_amount_currency_code != request.receiving_currency_code
+    {
+        return Err(Error::UnsupportedCurrency);
+    }
+    validate_pay_req_currency_fields(
+        receiving_currency_code,
+        receiving_currency_decimals,
+        conversion_rate,
+        receiver_fees_millisats,
+    )?;
+
+    let rate = match conversion_rate {
+        Some(rate) => rate,
+        None => 1.0,
+    };
+
+    let fee = match receiver_fees_millisats {
+        Some(fee) => fee,
+        None => 0,
+    };
+
+    let amount = match (
+        receiving_currency_code,
+        &request.sending_amount_currency_code,
+    ) {
+        (Some(_), Some(_)) => ((request.amount as f64) * rate) as i64 + fee,
+        _ => request.amount,
+    };
+
+    let payer_data_str = match &request.payer_data {
+        Some(data) => serde_json::to_string(&data).map_err(Error::InvalidData)?,
+        None => "".to_string(),
+    };
+
+    let metadata_str = format!("{}{}", metadata, payer_data_str);
+    let encoded_invoice = invoice_creator
+        .create_invoice(amount, &metadata_str)
+        .map_err(|err| Error::CreateInvoiceError(err.to_string()))?;
+
+    let payee_data = match (
+        request.is_uma_request(),
+        payee_data.is_some_and(|data| data.compliance().is_ok_and(|c| c.is_some())),
+    ) {
+        (true, false) => {
+            validate_uma_pay_req_fields(
+                receiving_currency_code,
+                receiving_currency_decimals,
+                conversion_rate,
+                receiver_fees_millisats,
+                receiver_channel_utxos,
+                receiver_node_pub_key,
+                payee_identifier,
+                receiving_vasp_private_key.as_deref(),
+            )?;
+
+            let payer_identifier = request
+                .payer_data
+                .as_ref()
+                .expect("UMA request has non-nil payer_data")
+                .identifier();
+
+            let utxos = match receiver_channel_utxos {
+                Some(utxos) => utxos.to_vec(),
+                None => vec![],
+            };
+
+            let complince_data = get_signed_compliance_payee_data(
+                &receiving_vasp_private_key.expect("Validated"),
+                payer_identifier.expect("Validated"),
+                payee_identifier.expect("Validated"),
+                &utxos,
+                receiver_node_pub_key.expect("validated"),
+                utxo_callback,
+            )?;
+
+            match payee_data {
+                Some(data) => {
+                    let mut map = match &data.0 {
+                        serde_json::Value::Object(map) => map.clone(),
+                        _ => return Err(Error::InvalidPayeeData),
+                    };
+                    map.insert(
+                        CounterPartyDataField::CounterPartyDataFieldCompliance.to_string(),
+                        serde_json::to_value(complince_data).map_err(Error::InvalidData)?,
+                    );
+                    Some(PayeeData(serde_json::Value::Object(map.clone())))
+                }
+                None => Some(PayeeData(serde_json::json!({
+                    CounterPartyDataField::CounterPartyDataFieldIdentifier.to_string(): payee_identifier,
+                    CounterPartyDataField::CounterPartyDataFieldCompliance.to_string(): complince_data
+                }))),
+            }
+        }
+        (_, _) => payee_data.cloned(),
+    };
+
+    let receiving_currency_amount = match (
+        request.uma_major_version,
+        &request.sending_amount_currency_code,
+    ) {
+        (0, _) => None,
+        (_, Some(_)) => Some(((amount - fee) as f64 / rate) as i64),
+        (_, None) => Some(request.amount),
+    };
+
+    let payment_info = match receiving_currency_code {
+        Some(code) => Some(PayReqResponsePaymentInfo {
+            amount: receiving_currency_amount,
+            currency_code: code.to_string(),
+            decimals: receiving_currency_decimals.expect("Validated"),
+            multiplier: conversion_rate.expect("Validated"),
+            exchange_fees_millisatoshi: receiver_fees_millisats.expect("Validated"),
+        }),
+        None => None,
+    };
+
+    Ok(PayReqResponse {
+        success_action,
+        disposable,
+        payment_info,
+        encoded_invoice,
+        routes: vec![],
+        payee_data: payee_data,
+        uma_major_version: request.uma_major_version,
+    })
+}
+
+fn validate_pay_req_currency_fields(
+    receiving_currency_code: Option<&str>,
+    receiving_currency_decimals: Option<i32>,
+    conversion_rate: Option<f64>,
+    receiver_fees_millisats: Option<i64>,
+) -> Result<(), Error> {
+    let mut num_nil_fields = 0;
+    if receiving_currency_code.is_none() {
+        num_nil_fields += 1;
+    }
+    if receiving_currency_decimals.is_none() {
+        num_nil_fields += 1;
+    }
+    if conversion_rate.is_none() {
+        num_nil_fields += 1;
+    }
+    if receiver_fees_millisats.is_none() {
+        num_nil_fields += 1;
+    }
+    if num_nil_fields != 0 && num_nil_fields != 4 {
+        return Err(Error::InvalidCurrencyFields);
+    }
+    Ok(())
+}
+
+fn validate_uma_pay_req_fields(
+    receiving_currency_code: Option<&str>,
+    receiving_currency_decimals: Option<i32>,
+    conversion_rate: Option<f64>,
+    receiver_fees_millisats: Option<i64>,
+    receiver_channel_utxos: Option<&[String]>,
+    receiver_node_pub_key: Option<&str>,
+    payee_identifier: Option<&str>,
+    signing_private_key: Option<&[u8]>,
+) -> Result<(), Error> {
+    if receiving_currency_code.is_none()
+        || receiving_currency_decimals.is_none()
+        || conversion_rate.is_none()
+        || receiver_fees_millisats.is_none()
+    {
+        return Err(Error::MissingUmaField("currency fields".to_string()));
+    }
+
+    if payee_identifier.is_none() {
+        return Err(Error::MissingUmaField("payee_identifier".to_string()));
+    }
+
+    if signing_private_key.is_none() {
+        return Err(Error::MissingUmaField("signing_private_key".to_string()));
+    }
+
+    if receiver_channel_utxos.is_none() && receiver_node_pub_key.is_none() {
+        return Err(Error::MissingUmaField(
+            "receiver_channel_utxos and/or receiver_node_pub_key".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn get_signed_compliance_payee_data(
+    receiving_vasp_private_key: &[u8],
+    payer_identifier: &str,
+    payee_identifier: &str,
+    receiver_channel_utxos: &[String],
+    receiver_node_pub_key: &str,
+    utxo_callback: Option<&str>,
+) -> Result<CompliancePayeeData, Error> {
+    let timestamp = chrono::Utc::now().timestamp();
+    let nonce = generate_nonce();
+    let mut builder = CompliancePayeeDataBuilder::new()
+        .utxos(receiver_channel_utxos.to_vec())
+        .node_pubkey(Some(receiver_node_pub_key.to_string()))
+        .utxo_callback(utxo_callback.map(|s| s.to_string()))
+        .signature_nonce(Some(nonce))
+        .signature_timestamp(Some(timestamp));
+    let signable_payload = builder
+        .build()
+        .signable_payload(payer_identifier, payee_identifier)
+        .map_err(Error::ProtocolError)?;
+    let signature = sign_payload(&signable_payload, &receiving_vasp_private_key)?;
+    builder = builder.signature(Some(signature));
+    Ok(builder.build())
 }
 
 pub fn parse_pay_req_response(bytes: &[u8]) -> Result<PayReqResponse, Error> {

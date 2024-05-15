@@ -61,3 +61,66 @@ impl CompliancePayeeData {
         Ok(payload_string.into_bytes())
     }
 }
+
+pub struct CompliancePayeeDataBuilder {
+    node_pubkey: Option<String>,
+    utxos: Vec<String>,
+    utxo_callback: Option<String>,
+    signature: Option<String>,
+    signature_nonce: Option<String>,
+    signature_timestamp: Option<i64>,
+}
+
+impl CompliancePayeeDataBuilder {
+    pub fn new() -> Self {
+        Self {
+            node_pubkey: None,
+            utxos: Vec::new(),
+            utxo_callback: None,
+            signature: None,
+            signature_nonce: None,
+            signature_timestamp: None,
+        }
+    }
+
+    pub fn node_pubkey(mut self, node_pubkey: Option<String>) -> Self {
+        self.node_pubkey = node_pubkey;
+        self
+    }
+
+    pub fn utxos(mut self, utxos: Vec<String>) -> Self {
+        self.utxos = utxos;
+        self
+    }
+
+    pub fn utxo_callback(mut self, utxo_callback: Option<String>) -> Self {
+        self.utxo_callback = utxo_callback;
+        self
+    }
+
+    pub fn signature(mut self, signature: Option<String>) -> Self {
+        self.signature = signature;
+        self
+    }
+
+    pub fn signature_nonce(mut self, signature_nonce: Option<String>) -> Self {
+        self.signature_nonce = signature_nonce;
+        self
+    }
+
+    pub fn signature_timestamp(mut self, signature_timestamp: Option<i64>) -> Self {
+        self.signature_timestamp = signature_timestamp;
+        self
+    }
+
+    pub fn build(&self) -> CompliancePayeeData {
+        CompliancePayeeData {
+            node_pubkey: self.node_pubkey.clone(),
+            utxos: self.utxos.clone(),
+            utxo_callback: self.utxo_callback.clone(),
+            signature: self.signature.clone(),
+            signature_nonce: self.signature_nonce.clone(),
+            signature_timestamp: self.signature_timestamp.clone(),
+        }
+    }
+}

@@ -9,7 +9,7 @@ mod tests {
     use crate::uma::{
         get_lnurlp_response, get_pay_request, get_signed_lnurlp_request_url, is_uma_lnurl_query,
         parse_lnurlp_request, parse_lnurlp_response, parse_pay_request, verify_pay_req_signature,
-        verify_uma_lnurlp_query_signature, verify_uma_lnurlp_response_signature, UmaInvoiceCreator,
+        verify_uma_lnurlp_query_signature, verify_uma_lnurlp_response_signature, InvoiceCreator,
     };
 
     use crate::protocol::{currency::Currency, lnurl_request::LnurlpRequest};
@@ -302,8 +302,8 @@ mod tests {
     #[allow(dead_code)]
     struct FakeInvoiceCreator {}
 
-    impl UmaInvoiceCreator for FakeInvoiceCreator {
-        fn create_uma_invoice(
+    impl InvoiceCreator for FakeInvoiceCreator {
+        fn create_invoice(
             &self,
             _amount_msat: i64,
             _metadata: &str,
