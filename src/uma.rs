@@ -35,7 +35,7 @@ use crate::{
 #[derive(Debug)]
 pub enum Error {
     Secp256k1Error(bitcoin::secp256k1::Error),
-    EciesSecp256k1Error(ecies::SecpError),
+    EciesSecp256k1Error,
     SignatureFormatError,
     InvalidSignature,
     InvalidResponse,
@@ -62,7 +62,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Secp256k1Error(err) => write!(f, "Secp256k1 error {}", err),
-            Self::EciesSecp256k1Error(err) => write!(f, "Ecies Secp256k1 error {}", err),
+            Self::EciesSecp256k1Error => write!(f, "Ecies Secp256k1 error"),
             Self::SignatureFormatError => write!(f, "Signature format error"),
             Self::InvalidSignature => write!(f, "Invalid signature"),
             Self::InvalidResponse => write!(f, "Invalid response"),
@@ -646,7 +646,7 @@ fn get_signed_compliance_payer_data(
 
 fn encrypt_tr_info(tr_info: &str, receiver_encryption_pub_key: &[u8]) -> Result<String, Error> {
     let cipher_text = ecies::encrypt(receiver_encryption_pub_key, tr_info.as_bytes())
-        .map_err(Error::EciesSecp256k1Error)?;
+        .map_err(|_| Error::EciesSecp256k1Error)?;
     Ok(hex::encode(cipher_text))
 }
 
