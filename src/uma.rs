@@ -8,7 +8,9 @@ use x509_cert::{der::Decode, Certificate};
 use crate::{
     nonce_cache::NonceCache,
     protocol::{
-        counter_party_data::{CounterPartyDataField, CounterPartyDataOptions},
+        counter_party_data::{
+            CounterPartyDataField, CounterPartyDataOption, CounterPartyDataOptions,
+        },
         currency::Currency,
         kyc_status::KycStatus,
         lnurl_request::{LnurlpRequest, UmaLnurlpRequest},
@@ -22,7 +24,7 @@ use crate::{
         },
         pub_key_response::PubKeyResponse,
     },
-    version::UnsupportedVersionError,
+    version::{ParsedVersion, UnsupportedVersionError},
 };
 
 use crate::{
@@ -387,8 +389,8 @@ pub fn verify_uma_lnurlp_query_signature(
 #[allow(clippy::too_many_arguments)]
 pub fn get_lnurlp_response(
     query: &LnurlpRequest,
-    private_key_bytes: &[u8],
-    requires_travel_rule_info: bool,
+    private_key_bytes: Option<&[u8]>,
+    requires_travel_rule_info: Option<bool>,
     callback: &str,
     encoded_metadata: &str,
     min_sendable_sats: i64,
@@ -399,18 +401,54 @@ pub fn get_lnurlp_response(
     comment_chars_allowed: Option<i64>,
     nostr_pubkey: Option<String>,
 ) -> Result<LnurlpResponse, Error> {
-    // TODO: nil fields
-    let compliance_response = get_signed_compliance_respionse(
-        query,
-        private_key_bytes,
-        requires_travel_rule_info,
-        receiver_kyc_status,
-    )?;
-    let uma_version = version::select_lower_version(
-        &query.uma_version.clone().ok_or(Error::InvalidVersion)?,
-        &version::uma_protocol_version(),
-    )
-    .map_err(|_| Error::InvalidVersion)?;
+    let mut payer_data_options = payer_data_options.clone();
+    let (compliance_response, uma_version) = match query.as_uma_lnurlp_request() {
+        Some(uma_query) => {
+            let compliance_response = get_signed_compliance_respionse(
+                query,
+                private_key_bytes.ok_or(Error::InvalidResponse)?,
+                requires_travel_rule_info.ok_or(Error::InvalidResponse)?,
+                receiver_kyc_status,
+            )?;
+            let uma_version = version::select_lower_version(
+                &uma_query.uma_version,
+                &version::uma_protocol_version(),
+            )
+            .map_err(|_| Error::InvalidVersion)?;
+            payer_data_options.insert(
+                CounterPartyDataField::CounterPartyDataFieldIdentifier,
+                CounterPartyDataOption { mandatory: true },
+            );
+            payer_data_options.insert(
+                CounterPartyDataField::CounterPartyDataFieldCompliance,
+                CounterPartyDataOption { mandatory: true },
+            );
+            (Some(compliance_response), Some(uma_version))
+        }
+        None => (None, None),
+    };
+
+    let currency_options = match uma_version.clone() {
+        Some(v) => {
+            if let Ok(parsed) = ParsedVersion::new(&v) {
+                if parsed.major == 0 {
+                    currency_options
+                        .iter()
+                        .map(|c| {
+                            let mut new_currency = c.clone();
+                            new_currency.uma_major_version = 0;
+                            new_currency
+                        })
+                        .collect::<Vec<Currency>>()
+                } else {
+                    currency_options.to_vec()
+                }
+            } else {
+                currency_options.to_vec()
+            }
+        }
+        None => currency_options.to_vec(),
+    };
 
     let mut allows_nostr: Option<bool> = None;
     if nostr_pubkey.is_some() {
@@ -423,10 +461,10 @@ pub fn get_lnurlp_response(
         min_sendable: min_sendable_sats * 1000,
         max_sendable: max_sendable_sats * 1000,
         encoded_metadata: encoded_metadata.to_string(),
-        currencies: Some(currency_options.to_vec()),
-        required_payer_data: Some(payer_data_options.clone()),
-        compliance: Some(compliance_response.clone()),
-        uma_version: Some(uma_version.clone()),
+        currencies: Some(currency_options),
+        required_payer_data: Some(payer_data_options),
+        compliance: compliance_response,
+        uma_version,
         comment_chars_allowed,
         nostr_pubkey,
         allows_nostr,

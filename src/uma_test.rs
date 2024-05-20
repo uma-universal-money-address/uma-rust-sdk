@@ -206,8 +206,8 @@ mod tests {
 
         let response = get_lnurlp_response(
             &query,
-            &sk2.serialize(),
-            true,
+            Some(&sk2.serialize()),
+            Some(true),
             "https://vasp2.com/api/lnurl/payreq/$bob",
             metadata.as_str(),
             1,
