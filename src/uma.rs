@@ -370,7 +370,7 @@ pub fn parse_lnurlp_request(url: &url::Url) -> Result<LnurlpRequest, Error> {
 /// * `query` - the signed query to verify.
 /// * `other_vasp_pub_key` - the bytes of the signing public key of the VASP making this request.
 pub fn verify_uma_lnurlp_query_signature(
-    query: UmaLnurlpRequest,
+    query: &UmaLnurlpRequest,
     other_vasp_pub_key_response: &PubKeyResponse,
     nonce_cache: &mut dyn NonceCache,
 ) -> Result<(), Error> {

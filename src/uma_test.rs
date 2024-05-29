@@ -122,7 +122,7 @@ mod tests {
             expiration_timestamp: None,
         };
 
-        let result = verify_uma_lnurlp_query_signature(query, &pk_response, &mut nonce_cache);
+        let result = verify_uma_lnurlp_query_signature(&query, &pk_response, &mut nonce_cache);
         assert!(result.is_ok());
     }
 
@@ -155,7 +155,7 @@ mod tests {
             expiration_timestamp: None,
         };
 
-        let result = verify_uma_lnurlp_query_signature(query, &pk_response, &mut nonce_cache);
+        let result = verify_uma_lnurlp_query_signature(&query, &pk_response, &mut nonce_cache);
         assert!(result.is_err());
     }
 
