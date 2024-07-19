@@ -659,6 +659,7 @@ pub trait InvoiceCreator {
         &self,
         amount_msat: i64,
         metadata: &str,
+        receiver_identifier: Option<&str>,
     ) -> Result<String, Box<dyn std::error::Error>>;
 }
 
@@ -714,7 +715,7 @@ where
 
     let metadata_str = format!("{}{}", metadata, payer_data_str);
     let encoded_invoice = invoice_creator
-        .create_invoice(amount, &metadata_str)
+        .create_invoice(amount, &metadata_str, payee_identifier)
         .map_err(|err| Error::CreateInvoiceError(err.to_string()))?;
 
     let payee_data = match (

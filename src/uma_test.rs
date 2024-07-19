@@ -391,6 +391,7 @@ mod tests {
             &self,
             _amount_msat: i64,
             _metadata: &str,
+            _receiver_identifier: Option<&str>,
         ) -> Result<String, Box<dyn std::error::Error>> {
             Ok("lntb100n1p0z9j".to_owned())
         }
